@@ -16,6 +16,19 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("OpenAIChatNode", js)
         self.assertIn("AnthropicMessagesNode", js)
         self.assertIn("generatePython", js)
+        self.assertIn("edges", js)
+        self.assertIn("GraphExecutor", js)
+        self.assertIn("graph.connect(", js)
+        self.assertIn("Graph()", js)
+
+    def test_chat_page_references_assets_and_api(self):
+        html = (ROOT / "frontend" / "chat.html").read_text(encoding="utf-8")
+        js = (ROOT / "frontend" / "chat.js").read_text(encoding="utf-8")
+
+        self.assertIn("FlainBot Chat", html)
+        self.assertIn("chat.css", html)
+        self.assertIn("chat.js", html)
+        self.assertIn("/api/chat", js)
 
 
 if __name__ == "__main__":

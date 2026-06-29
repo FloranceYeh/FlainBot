@@ -1,9 +1,22 @@
 const nodeCatalog = [
   {
+    type: "input",
+    className: "InputNode",
+    title: "Web Chat Input",
+    description: "Reads the user's message from the web chat input.",
+    inputs: [],
+    outputs: ["text"],
+    defaults: {
+      text: "hello",
+    },
+  },
+  {
     type: "openai",
     className: "OpenAIChatNode",
     title: "OpenAI Chat",
-    description: "Calls an OpenAI-compatible chat completions endpoint.",
+    description: "Consumes text and calls an OpenAI-compatible chat endpoint.",
+    inputs: ["text"],
+    outputs: ["text", "request", "response"],
     defaults: {
       base_url: "https://api.openai.com/v1",
       api_key_env: "OPENAI_API_KEY",
@@ -14,7 +27,9 @@ const nodeCatalog = [
     type: "anthropic",
     className: "AnthropicMessagesNode",
     title: "Anthropic Messages",
-    description: "Calls the Anthropic Messages API endpoint.",
+    description: "Consumes text and calls the Anthropic Messages API.",
+    inputs: ["text"],
+    outputs: ["text", "request", "response"],
     defaults: {
       base_url: "https://api.anthropic.com/v1",
       api_key_env: "ANTHROPIC_API_KEY",
@@ -22,34 +37,28 @@ const nodeCatalog = [
     },
   },
   {
-    type: "request",
-    className: "RequestNode",
-    title: "Generic Request",
-    description: "Builds a request object and calls an injected client.",
-    defaults: {
-      client_name: "client",
-    },
-  },
-  {
-    type: "response",
-    className: "ResponseNode",
-    title: "Generic Response",
-    description: "Reads a generic response and writes context.output_text.",
+    type: "output",
+    className: "OutputNode",
+    title: "Web Chat Output",
+    description: "Sends model text to the web chat message list.",
+    inputs: ["text"],
+    outputs: ["reply"],
     defaults: {},
   },
 ];
 
-let chain = [];
+let graph = {nodes: [], edges: []};
 let selectedId = null;
 
 const libraryEl = document.getElementById("node-library");
-const chainEl = document.getElementById("chain-list");
-const chainCountEl = document.getElementById("chain-count");
+const graphEl = document.getElementById("graph-list");
+const graphCountEl = document.getElementById("graph-count");
 const propertyEditorEl = document.getElementById("property-editor");
 const pythonCodeEl = document.getElementById("python-code");
 
-function nextId() {
-  return `node-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function nextId(type) {
+  const count = graph.nodes.filter((node) => node.type === type).length + 1;
+  return `${type}_${count}`;
 }
 
 function cloneDefaults(defaults) {
@@ -59,45 +68,50 @@ function cloneDefaults(defaults) {
 function addNode(type) {
   const spec = nodeCatalog.find((node) => node.type === type);
   const item = {
-    id: nextId(),
+    id: nextId(spec.type),
     type: spec.type,
     className: spec.className,
     title: spec.title,
     description: spec.description,
+    inputs: spec.inputs,
+    outputs: spec.outputs,
     props: cloneDefaults(spec.defaults),
   };
-  chain.push(item);
+  graph.nodes.push(item);
   selectedId = item.id;
   render();
 }
 
-function moveNode(id, direction) {
-  const index = chain.findIndex((node) => node.id === id);
-  const target = index + direction;
-  if (index < 0 || target < 0 || target >= chain.length) {
-    return;
-  }
-  const [node] = chain.splice(index, 1);
-  chain.splice(target, 0, node);
-  render();
-}
-
 function removeNode(id) {
-  chain = chain.filter((node) => node.id !== id);
+  graph.nodes = graph.nodes.filter((node) => node.id !== id);
+  graph.edges = graph.edges.filter((edge) => edge.from_node !== id && edge.to_node !== id);
   if (selectedId === id) {
-    selectedId = chain[0]?.id ?? null;
+    selectedId = graph.nodes[0]?.id ?? null;
   }
   render();
 }
 
 function updateProperty(id, key, value) {
-  const node = chain.find((item) => item.id === id);
+  const node = graph.nodes.find((item) => item.id === id);
   if (!node) {
     return;
   }
   node.props[key] = value;
-  renderChain();
+  renderGraph();
   renderCode();
+}
+
+function addEdge(fromNode, fromPort, toNode, toPort) {
+  if (!fromNode || !fromPort || !toNode || !toPort || fromNode === toNode) {
+    return;
+  }
+  graph.edges.push({from_node: fromNode, from_port: fromPort, to_node: toNode, to_port: toPort});
+  render();
+}
+
+function removeEdge(index) {
+  graph.edges.splice(index, 1);
+  render();
 }
 
 function renderLibrary() {
@@ -116,28 +130,27 @@ function renderLibrary() {
   });
 }
 
-function renderChain() {
-  chainEl.innerHTML = "";
-  chainCountEl.textContent = `${chain.length} ${chain.length === 1 ? "node" : "nodes"}`;
+function renderGraph() {
+  graphEl.innerHTML = "";
+  graphCountEl.textContent = `${graph.nodes.length} nodes / ${graph.edges.length} edges`;
 
-  if (chain.length === 0) {
-    chainEl.innerHTML = '<div class="empty-state">Add nodes from the library to plan a chain.</div>';
+  if (graph.nodes.length === 0) {
+    graphEl.innerHTML = '<div class="empty-state">Add nodes from the library to plan a graph.</div>';
     return;
   }
 
-  chain.forEach((node, index) => {
+  graph.nodes.forEach((node) => {
     const item = document.createElement("article");
-    item.className = `chain-node${node.id === selectedId ? " selected" : ""}`;
+    item.className = `graph-node${node.id === selectedId ? " selected" : ""}`;
     item.innerHTML = `
       <div>
-        <span class="node-type">Step ${index + 1} · ${node.className}</span>
+        <span class="node-type">${node.id} / ${node.className}</span>
         <h3>${node.title}</h3>
         <p>${node.description}</p>
+        <p>Inputs: ${node.inputs.join(", ") || "none"} / Outputs: ${node.outputs.join(", ") || "none"}</p>
       </div>
-      <div class="chain-actions">
+      <div class="graph-actions">
         <button type="button" data-action="select">Select</button>
-        <button type="button" data-action="up">Up</button>
-        <button type="button" data-action="down">Down</button>
         <button type="button" data-action="remove" class="danger">Remove</button>
       </div>
     `;
@@ -145,16 +158,90 @@ function renderChain() {
       selectedId = node.id;
       render();
     });
-    item.querySelector('[data-action="up"]').addEventListener("click", () => moveNode(node.id, -1));
-    item.querySelector('[data-action="down"]').addEventListener("click", () => moveNode(node.id, 1));
     item.querySelector('[data-action="remove"]').addEventListener("click", () => removeNode(node.id));
-    chainEl.appendChild(item);
+    graphEl.appendChild(item);
   });
+
+  renderEdgeBuilder();
+  renderEdges();
+}
+
+function optionList(nodes, direction) {
+  return nodes
+    .filter((node) => direction === "from" ? node.outputs.length > 0 : node.inputs.length > 0)
+    .map((node) => `<option value="${node.id}">${node.id}</option>`)
+    .join("");
+}
+
+function renderEdgeBuilder() {
+  const builder = document.createElement("article");
+  builder.className = "node-card";
+  builder.innerHTML = `
+    <h3>Connect Ports</h3>
+    <div class="field">
+      <label>From node</label>
+      <select id="from-node">${optionList(graph.nodes, "from")}</select>
+    </div>
+    <div class="field">
+      <label>From port</label>
+      <select id="from-port"></select>
+    </div>
+    <div class="field">
+      <label>To node</label>
+      <select id="to-node">${optionList(graph.nodes, "to")}</select>
+    </div>
+    <div class="field">
+      <label>To port</label>
+      <select id="to-port"></select>
+    </div>
+    <button type="button">Connect</button>
+  `;
+
+  const fromNode = builder.querySelector("#from-node");
+  const fromPort = builder.querySelector("#from-port");
+  const toNode = builder.querySelector("#to-node");
+  const toPort = builder.querySelector("#to-port");
+
+  function syncPorts() {
+    const source = graph.nodes.find((node) => node.id === fromNode.value);
+    const target = graph.nodes.find((node) => node.id === toNode.value);
+    fromPort.innerHTML = (source?.outputs ?? []).map((port) => `<option value="${port}">${port}</option>`).join("");
+    toPort.innerHTML = (target?.inputs ?? []).map((port) => `<option value="${port}">${port}</option>`).join("");
+  }
+
+  fromNode.addEventListener("change", syncPorts);
+  toNode.addEventListener("change", syncPorts);
+  builder.querySelector("button").addEventListener("click", () => {
+    addEdge(fromNode.value, fromPort.value, toNode.value, toPort.value);
+  });
+  syncPorts();
+  graphEl.appendChild(builder);
+}
+
+function renderEdges() {
+  const list = document.createElement("div");
+  list.className = "node-list";
+  graph.edges.forEach((edge, index) => {
+    const item = document.createElement("article");
+    item.className = "graph-node";
+    item.innerHTML = `
+      <div>
+        <span class="node-type">Edge ${index + 1}</span>
+        <h3>${edge.from_node}.${edge.from_port} -> ${edge.to_node}.${edge.to_port}</h3>
+      </div>
+      <div class="graph-actions">
+        <button type="button" class="danger">Remove</button>
+      </div>
+    `;
+    item.querySelector("button").addEventListener("click", () => removeEdge(index));
+    list.appendChild(item);
+  });
+  graphEl.appendChild(list);
 }
 
 function renderProperties() {
   propertyEditorEl.innerHTML = "";
-  const selected = chain.find((node) => node.id === selectedId);
+  const selected = graph.nodes.find((node) => node.id === selectedId);
   if (!selected) {
     propertyEditorEl.innerHTML = '<div class="empty-state">Select a node to edit its properties.</div>';
     return;
@@ -192,29 +279,32 @@ function quote(value) {
 }
 
 function nodeToPython(node) {
+  if (node.type === "input") {
+    return `graph.add_node(${quote(node.id)}, InputNode(${quote(node.props.text)}))`;
+  }
+
   if (node.type === "openai" || node.type === "anthropic") {
-    return `    ${node.className}(\n` +
-      `        base_url=${quote(node.props.base_url)},\n` +
-      `        api_key=os.environ[${quote(node.props.api_key_env)}],\n` +
-      `        model=${quote(node.props.model)},\n` +
-      "    )";
+    return `graph.add_node(${quote(node.id)}, ${node.className}(\n` +
+      `    base_url=${quote(node.props.base_url)},\n` +
+      `    api_key=os.environ[${quote(node.props.api_key_env)}],\n` +
+      `    model=${quote(node.props.model)},\n` +
+      "))";
   }
 
-  if (node.type === "request") {
-    return `    RequestNode(client=${node.props.client_name})`;
-  }
-
-  return "    ResponseNode()";
+  return `graph.add_node(${quote(node.id)}, OutputNode())`;
 }
 
 function generatePython() {
-  const imports = new Set(["MessageContext", "Pipeline"]);
-  chain.forEach((node) => imports.add(node.className));
-  const needsOs = chain.some((node) => node.props.api_key_env);
+  const imports = new Set(["Graph", "GraphExecutor"]);
+  graph.nodes.forEach((node) => imports.add(node.className));
+  const needsOs = graph.nodes.some((node) => node.props.api_key_env);
   const importLine = `from flainbot import ${Array.from(imports).sort().join(", ")}`;
-  const nodeLines = chain.length > 0 ? chain.map(nodeToPython).join(",\n") : "    # Add nodes in the planner";
+  const nodeLines = graph.nodes.length > 0 ? graph.nodes.map(nodeToPython).join("\n") : "# Add nodes in the planner";
+  const edgeLines = graph.edges.map((edge) => (
+    `graph.connect(${quote(edge.from_node)}, ${quote(edge.from_port)}, ${quote(edge.to_node)}, ${quote(edge.to_port)})`
+  )).join("\n");
 
-  return `${needsOs ? "import os\n\n" : ""}${importLine}\n\n\npipeline = Pipeline([\n${nodeLines}\n])\ncontext = pipeline.run(MessageContext(input_text=\"hello\"))\nprint(context.output_text)\n`;
+  return `${needsOs ? "import os\n\n" : ""}${importLine}\n\n\ngraph = Graph()\n${nodeLines}\n${edgeLines ? `${edgeLines}\n` : ""}outputs = GraphExecutor(graph).run()\nprint(outputs)\n`;
 }
 
 function renderCode() {
@@ -222,13 +312,13 @@ function renderCode() {
 }
 
 function render() {
-  renderChain();
+  renderGraph();
   renderProperties();
   renderCode();
 }
 
-document.getElementById("reset-chain").addEventListener("click", () => {
-  chain = [];
+document.getElementById("reset-graph").addEventListener("click", () => {
+  graph = {nodes: [], edges: []};
   selectedId = null;
   render();
 });
@@ -239,4 +329,3 @@ document.getElementById("copy-code").addEventListener("click", async () => {
 
 renderLibrary();
 render();
-

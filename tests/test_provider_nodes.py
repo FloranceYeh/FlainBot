@@ -4,10 +4,20 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import AnthropicMessagesNode, MessageContext, OpenAIChatNode, Pipeline
+from flainbot import AnthropicMessagesNode, InputNode, OpenAIChatNode, OutputNode
 
 
 class ProviderNodeTests(unittest.TestCase):
+    def test_input_node_outputs_user_text(self):
+        outputs = InputNode("hello").run({})
+
+        self.assertEqual(outputs, {"text": "hello"})
+
+    def test_output_node_returns_reply_target(self):
+        outputs = OutputNode().run({"text": "reply"})
+
+        self.assertEqual(outputs, {"reply": "reply"})
+
     def test_openai_chat_node_posts_chat_completion_and_writes_output(self):
         calls = []
 
@@ -22,7 +32,7 @@ class ProviderNodeTests(unittest.TestCase):
             transport=fake_transport,
         )
 
-        context = Pipeline([node]).run(MessageContext(input_text="hello"))
+        outputs = node.run({"text": "hello"})
 
         self.assertEqual(node.base_url, "https://api.openai.test/v1")
         self.assertEqual(node.api_key, "test-key")
@@ -37,9 +47,9 @@ class ProviderNodeTests(unittest.TestCase):
                 "messages": [{"role": "user", "content": "hello"}],
             },
         )
-        self.assertEqual(context.data["request"], calls[0][2])
-        self.assertEqual(context.data["response"]["choices"][0]["message"]["content"], "hello from openai")
-        self.assertEqual(context.output_text, "hello from openai")
+        self.assertEqual(outputs["request"], calls[0][2])
+        self.assertEqual(outputs["response"]["choices"][0]["message"]["content"], "hello from openai")
+        self.assertEqual(outputs["text"], "hello from openai")
 
     def test_anthropic_messages_node_posts_message_and_writes_output(self):
         calls = []
@@ -55,7 +65,7 @@ class ProviderNodeTests(unittest.TestCase):
             transport=fake_transport,
         )
 
-        context = Pipeline([node]).run(MessageContext(input_text="hello"))
+        outputs = node.run({"text": "hello"})
 
         self.assertEqual(node.base_url, "https://api.anthropic.test/v1")
         self.assertEqual(node.api_key, "test-key")
@@ -72,9 +82,9 @@ class ProviderNodeTests(unittest.TestCase):
                 "messages": [{"role": "user", "content": "hello"}],
             },
         )
-        self.assertEqual(context.data["request"], calls[0][2])
-        self.assertEqual(context.data["response"]["content"][0]["text"], "hello from anthropic")
-        self.assertEqual(context.output_text, "hello from anthropic")
+        self.assertEqual(outputs["request"], calls[0][2])
+        self.assertEqual(outputs["response"]["content"][0]["text"], "hello from anthropic")
+        self.assertEqual(outputs["text"], "hello from anthropic")
 
 
 if __name__ == "__main__":

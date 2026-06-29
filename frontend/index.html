@@ -10,9 +10,9 @@
     <header class="topbar">
       <div>
         <h1>FlainBot Node Planner</h1>
-        <p>View available nodes and plan a linear chatbot chain.</p>
+        <p>View available nodes and plan a chatbot graph.</p>
       </div>
-      <button id="reset-chain" type="button">Reset</button>
+      <button id="reset-graph" type="button">Reset</button>
     </header>
 
     <main class="workspace">
@@ -21,12 +21,12 @@
         <div id="node-library" class="node-list"></div>
       </section>
 
-      <section class="panel chain-panel" aria-labelledby="chain-title">
+      <section class="panel graph-panel" aria-labelledby="graph-title">
         <div class="section-header">
-          <h2 id="chain-title">Chain Plan</h2>
-          <span id="chain-count" class="count">0 nodes</span>
+          <h2 id="graph-title">Graph Plan</h2>
+          <span id="graph-count" class="count">0 nodes</span>
         </div>
-        <div id="chain-list" class="chain-list"></div>
+        <div id="graph-list" class="graph-list"></div>
       </section>
 
       <section class="panel inspector" aria-labelledby="inspector-title">
@@ -46,4 +46,3 @@
     <script src="app.js"></script>
   </body>
 </html>
-

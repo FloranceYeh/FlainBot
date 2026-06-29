@@ -50,6 +50,25 @@ class SmokeChatScriptTests(unittest.TestCase):
                 model="test",
             )
 
+    def test_build_chat_graph_connects_input_provider_output(self):
+        provider = smoke_chat.build_node(
+            provider="openai",
+            env={"OPENAI_API_KEY": "key"},
+            base_url=None,
+            model="gpt-test",
+        )
+
+        graph = smoke_chat.build_chat_graph("hello", provider)
+
+        self.assertEqual(set(graph.nodes), {"input", "provider", "output"})
+        self.assertEqual(
+            [(edge.from_node, edge.from_port, edge.to_node, edge.to_port) for edge in graph.edges],
+            [
+                ("input", "text", "provider", "text"),
+                ("provider", "text", "output", "text"),
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -105,14 +105,14 @@ button:hover {
 }
 
 .node-list,
-.chain-list,
+.graph-list,
 .property-editor {
   display: grid;
   gap: 10px;
 }
 
 .node-card,
-.chain-node {
+.graph-node {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 12px;
@@ -120,20 +120,20 @@ button:hover {
 }
 
 .node-card h3,
-.chain-node h3 {
+.graph-node h3 {
   margin: 0 0 4px;
   font-size: 16px;
 }
 
 .node-card p,
-.chain-node p {
+.graph-node p {
   margin: 0 0 12px;
   color: var(--muted);
   line-height: 1.45;
 }
 
 .node-card button,
-.chain-actions button:first-child,
+.graph-actions button:first-child,
 #copy-code {
   background: var(--accent);
   border-color: var(--accent);
@@ -141,30 +141,30 @@ button:hover {
 }
 
 .node-card button:hover,
-.chain-actions button:first-child:hover,
+.graph-actions button:first-child:hover,
 #copy-code:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: #ffffff;
 }
 
-.chain-node {
+.graph-node {
   display: grid;
   gap: 10px;
 }
 
-.chain-node.selected {
+.graph-node.selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.12);
 }
 
-.chain-actions {
+.graph-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.chain-actions .danger {
+.graph-actions .danger {
   color: var(--danger);
 }
 
@@ -220,4 +220,3 @@ code {
     grid-column: auto;
   }
 }
-

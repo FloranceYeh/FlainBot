@@ -6,8 +6,6 @@ from typing import Any
 from urllib import request as urllib_request
 from urllib.error import HTTPError
 
-from .context import MessageContext
-
 JsonObject = dict[str, Any]
 Transport = Callable[[str, dict[str, str], JsonObject], JsonObject]
 
@@ -39,10 +37,10 @@ class OpenAIChatNode:
         self.model = model
         self._transport = transport
 
-    def handle(self, context: MessageContext) -> None:
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {
             "model": self.model,
-            "messages": [{"role": "user", "content": context.input_text}],
+            "messages": [{"role": "user", "content": inputs["text"]}],
         }
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -51,9 +49,11 @@ class OpenAIChatNode:
         response = self._transport(
             f"{self.base_url}/chat/completions", headers, request_body
         )
-        context.data["request"] = request_body
-        context.data["response"] = response
-        context.output_text = response["choices"][0]["message"]["content"]
+        return {
+            "request": request_body,
+            "response": response,
+            "text": response["choices"][0]["message"]["content"],
+        }
 
 
 class AnthropicMessagesNode:
@@ -75,11 +75,11 @@ class AnthropicMessagesNode:
         self.anthropic_version = anthropic_version
         self._transport = transport
 
-    def handle(self, context: MessageContext) -> None:
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {
             "model": self.model,
             "max_tokens": self.max_tokens,
-            "messages": [{"role": "user", "content": context.input_text}],
+            "messages": [{"role": "user", "content": inputs["text"]}],
         }
         headers = {
             "x-api-key": self.api_key,
@@ -87,7 +87,8 @@ class AnthropicMessagesNode:
             "Content-Type": "application/json",
         }
         response = self._transport(f"{self.base_url}/messages", headers, request_body)
-        context.data["request"] = request_body
-        context.data["response"] = response
-        context.output_text = response["content"][0]["text"]
-
+        return {
+            "request": request_body,
+            "response": response,
+            "text": response["content"][0]["text"],
+        }

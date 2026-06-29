@@ -8,7 +8,14 @@ from typing import Mapping
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import AnthropicMessagesNode, MessageContext, OpenAIChatNode, Pipeline
+from flainbot import (
+    AnthropicMessagesNode,
+    Graph,
+    GraphExecutor,
+    InputNode,
+    OpenAIChatNode,
+    OutputNode,
+)
 
 DEFAULT_BASE_URLS = {
     "openai": "https://api.openai.com/v1",
@@ -56,12 +63,12 @@ def build_node(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run a real FlainBot chat chain.")
+    parser = argparse.ArgumentParser(description="Run a real FlainBot chat graph.")
     parser.add_argument("provider", choices=["openai", "anthropic"])
     parser.add_argument(
         "--message",
         default="Reply with exactly: flainbot smoke ok",
-        help="Message sent through the pipeline.",
+        help="Message sent through the graph.",
     )
     parser.add_argument(
         "--model",
@@ -76,6 +83,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def build_chat_graph(message: str, provider_node) -> Graph:
+    graph = Graph()
+    graph.add_node("input", InputNode(message))
+    graph.add_node("provider", provider_node)
+    graph.add_node("output", OutputNode())
+    graph.connect("input", "text", "provider", "text")
+    graph.connect("provider", "text", "output", "text")
+    return graph
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     model = args.model or DEFAULT_MODELS[args.provider]
@@ -86,15 +103,16 @@ def main(argv: list[str] | None = None) -> int:
         model=model,
     )
 
-    context = Pipeline([node]).run(MessageContext(input_text=args.message))
+    graph = build_chat_graph(args.message, node)
+    outputs = GraphExecutor(graph).run()
 
     print(f"provider: {args.provider}")
     print(f"base_url: {node.base_url}")
     print(f"model: {node.model}")
-    print(f"reply: {context.output_text}")
-    print("trace:")
-    for trace in context.trace:
-        print(f"- {trace.node_name}: {trace.status}")
+    print(f"reply: {outputs['output']['reply']}")
+    print("nodes:")
+    for node_id in outputs:
+        print(f"- {node_id}")
     return 0
 
 
