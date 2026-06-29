@@ -68,6 +68,32 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_graph_api_accepts_browser_preflight_from_static_server(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            req = request.Request(
+                f"{base_url}/api/graph",
+                headers={
+                    "Origin": "http://127.0.0.1:5500",
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "Content-Type",
+                },
+                method="OPTIONS",
+            )
+            with request.urlopen(req, timeout=5) as response:
+                self.assertEqual(response.status, 204)
+                self.assertEqual(response.headers["Access-Control-Allow-Origin"], "*")
+                self.assertIn("POST", response.headers["Access-Control-Allow-Methods"])
+                self.assertIn("Content-Type", response.headers["Access-Control-Allow-Headers"])
+        finally:
+            server.shutdown()
+            server.server_close()
+
 
 if __name__ == "__main__":
     unittest.main()

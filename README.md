@@ -50,8 +50,9 @@ python -m unittest -v
 Open `frontend/index.html` in a browser to view available nodes and plan a graph
 on a draggable canvas. Node properties are edited inside each node, and output
 ports connect to input ports with arrowed edges. The page runs locally without a
-dev server. When opened through `scripts/web_chat.py`, the planner can save the
-active graph for web chat to execute.
+dev server for visual editing. To save the active graph for web chat, run
+`scripts/web_chat.py`; the static planner will call its API on
+`http://127.0.0.1:8765` when opened from `file://` or a `5500` live server.
 
 ## Web Chat
 

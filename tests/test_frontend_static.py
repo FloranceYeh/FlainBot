@@ -30,7 +30,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("pointerdown", js)
         self.assertIn("data-port", js)
         self.assertIn("marker-end", js)
-        self.assertIn("/api/graph", js)
+        self.assertIn("apiUrl(\"/api/graph\")", js)
+        self.assertIn("127.0.0.1:8765", js)
         self.assertIn("api_key", js)
 
     def test_chat_page_references_assets_and_api(self):
@@ -40,7 +41,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("FlainBot Chat", html)
         self.assertIn("chat.css", html)
         self.assertIn("chat.js", html)
-        self.assertIn("/api/chat", js)
+        self.assertIn("apiUrl(\"/api/chat\")", js)
+        self.assertIn("127.0.0.1:8765", js)
 
 
 if __name__ == "__main__":

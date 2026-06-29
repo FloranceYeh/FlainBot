@@ -57,6 +57,19 @@ const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
 const pythonCodeEl = document.getElementById("python-code");
 
+function defaultApiBaseUrl() {
+  if (window.location.protocol === "file:" || window.location.port === "5500") {
+    return "http://127.0.0.1:8765";
+  }
+  return "";
+}
+
+const apiBaseUrl = window.FLAINBOT_API_BASE_URL || defaultApiBaseUrl();
+
+function apiUrl(path) {
+  return `${apiBaseUrl}${path}`;
+}
+
 function nextId(type) {
   const count = graph.nodes.filter((node) => node.type === type).length + 1;
   return `${type}_${count}`;
@@ -344,7 +357,7 @@ function serializeGraph() {
 }
 
 async function saveGraph() {
-  const response = await fetch("/api/graph", {
+  const response = await fetch(apiUrl("/api/graph"), {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(serializeGraph()),

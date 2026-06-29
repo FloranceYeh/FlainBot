@@ -103,6 +103,16 @@ def make_handler(store: GraphConfigStore):
             payload = self.read_json()
             self.send_json(run_chat(payload["message"], store))
 
+        def do_OPTIONS(self) -> None:
+            if self.path not in {"/api/graph", "/api/chat"}:
+                self.send_error(404)
+                return
+
+            self.send_response(204)
+            self.send_cors_headers()
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
         def read_json(self) -> dict:
             length = int(self.headers.get("Content-Length", "0"))
             return json.loads(self.rfile.read(length).decode("utf-8"))
@@ -110,10 +120,16 @@ def make_handler(store: GraphConfigStore):
         def send_json(self, payload: dict) -> None:
             body = json.dumps(payload).encode("utf-8")
             self.send_response(200)
+            self.send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def send_cors_headers(self) -> None:
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
         def log_message(self, format: str, *args) -> None:
             return
