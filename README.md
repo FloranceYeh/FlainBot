@@ -7,19 +7,42 @@ node interface open for later adapters and extensions.
 ## Minimal Example
 
 ```python
-from flainbot import MessageContext, Pipeline, RequestNode, ResponseNode
+import os
+
+from flainbot import MessageContext, OpenAIChatNode, Pipeline
 
 
-def fake_client(request):
-    user_message = request["messages"][-1]["content"]
-    return {"text": f"echo: {user_message}"}
+node = OpenAIChatNode(
+    base_url="https://api.openai.com/v1",
+    api_key=os.environ["OPENAI_API_KEY"],
+    model="gpt-4.1-mini",
+)
 
-
-pipeline = Pipeline([RequestNode(client=fake_client), ResponseNode()])
+pipeline = Pipeline([node])
 context = pipeline.run(MessageContext(input_text="hello"))
 
 print(context.output_text)
 print(context.trace)
+```
+
+Anthropic-compatible nodes use the same shape:
+
+```python
+import os
+
+from flainbot import AnthropicMessagesNode, MessageContext, Pipeline
+
+
+node = AnthropicMessagesNode(
+    base_url="https://api.anthropic.com/v1",
+    api_key=os.environ["ANTHROPIC_API_KEY"],
+    model="claude-sonnet-4-5",
+)
+
+pipeline = Pipeline([node])
+context = pipeline.run(MessageContext(input_text="hello"))
+
+print(context.output_text)
 ```
 
 ## Extension Point

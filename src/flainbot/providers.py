@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+import json
+from typing import Any
+from urllib import request as urllib_request
+from urllib.error import HTTPError
+
+from .context import MessageContext
+
+JsonObject = dict[str, Any]
+Transport = Callable[[str, dict[str, str], JsonObject], JsonObject]
+
+
+def json_post(url: str, headers: dict[str, str], body: JsonObject) -> JsonObject:
+    data = json.dumps(body).encode("utf-8")
+    req = urllib_request.Request(url, data=data, headers=headers, method="POST")
+    try:
+        with urllib_request.urlopen(req, timeout=60) as response:
+            payload = response.read().decode("utf-8")
+    except HTTPError as exc:
+        error_payload = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {exc.code}: {error_payload}") from exc
+    return json.loads(payload)
+
+
+class OpenAIChatNode:
+    name = "openai_chat"
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        transport: Transport = json_post,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model = model
+        self._transport = transport
+
+    def handle(self, context: MessageContext) -> None:
+        request_body: JsonObject = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": context.input_text}],
+        }
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        response = self._transport(
+            f"{self.base_url}/chat/completions", headers, request_body
+        )
+        context.data["request"] = request_body
+        context.data["response"] = response
+        context.output_text = response["choices"][0]["message"]["content"]
+
+
+class AnthropicMessagesNode:
+    name = "anthropic_messages"
+
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        transport: Transport = json_post,
+        max_tokens: int = 1024,
+        anthropic_version: str = "2023-06-01",
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model = model
+        self.max_tokens = max_tokens
+        self.anthropic_version = anthropic_version
+        self._transport = transport
+
+    def handle(self, context: MessageContext) -> None:
+        request_body: JsonObject = {
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "messages": [{"role": "user", "content": context.input_text}],
+        }
+        headers = {
+            "x-api-key": self.api_key,
+            "anthropic-version": self.anthropic_version,
+            "Content-Type": "application/json",
+        }
+        response = self._transport(f"{self.base_url}/messages", headers, request_body)
+        context.data["request"] = request_body
+        context.data["response"] = response
+        context.output_text = response["content"][0]["text"]
+
