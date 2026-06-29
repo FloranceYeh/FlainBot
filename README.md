@@ -9,11 +9,11 @@ those ports into a runtime graph.
 ```python
 import os
 
-from flainbot import Graph, GraphExecutor, InputNode, OpenAIChatNode, OutputNode
+from flainbot import ChatInputNode, ChatOutputNode, Graph, GraphExecutor, OpenAIChatNode
 
 
 graph = Graph()
-graph.add_node("input", InputNode("hello"))
+graph.add_node("input", ChatInputNode("hello"))
 graph.add_node(
     "model",
     OpenAIChatNode(
@@ -22,7 +22,7 @@ graph.add_node(
         model="gpt-4.1-mini",
     ),
 )
-graph.add_node("output", OutputNode())
+graph.add_node("output", ChatOutputNode())
 graph.connect("input", "text", "model", "text")
 graph.connect("model", "text", "output", "text")
 
@@ -50,7 +50,8 @@ python -m unittest -v
 Open `frontend/index.html` in a browser to view available nodes and plan a graph
 on a draggable canvas. Node properties are edited inside each node, and output
 ports connect to input ports with arrowed edges. The page runs locally without a
-dev server.
+dev server. When opened through `scripts/web_chat.py`, the planner can save the
+active graph for web chat to execute.
 
 ## Web Chat
 

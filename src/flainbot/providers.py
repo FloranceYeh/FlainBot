@@ -30,12 +30,12 @@ class OpenAIChatNode:
         base_url: str,
         api_key: str,
         model: str,
-        transport: Transport = json_post,
+        transport: Transport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model
-        self._transport = transport
+        self._transport = transport or json_post
 
     def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {
@@ -64,7 +64,7 @@ class AnthropicMessagesNode:
         base_url: str,
         api_key: str,
         model: str,
-        transport: Transport = json_post,
+        transport: Transport | None = None,
         max_tokens: int = 1024,
         anthropic_version: str = "2023-06-01",
     ) -> None:
@@ -73,7 +73,7 @@ class AnthropicMessagesNode:
         self.model = model
         self.max_tokens = max_tokens
         self.anthropic_version = anthropic_version
-        self._transport = transport
+        self._transport = transport or json_post
 
     def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {

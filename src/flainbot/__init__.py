@@ -1,4 +1,4 @@
-from .builtins import InputNode, OutputNode
+from .builtins import ChatInputNode, ChatOutputNode
 from .graph import Graph, GraphEdge, GraphError, GraphExecutor
 from .providers import AnthropicMessagesNode, OpenAIChatNode
 
@@ -8,7 +8,7 @@ __all__ = [
     "GraphEdge",
     "GraphError",
     "GraphExecutor",
-    "InputNode",
+    "ChatInputNode",
+    "ChatOutputNode",
     "OpenAIChatNode",
-    "OutputNode",
 ]

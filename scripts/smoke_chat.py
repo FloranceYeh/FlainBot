@@ -10,11 +10,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from flainbot import (
     AnthropicMessagesNode,
+    ChatInputNode,
+    ChatOutputNode,
     Graph,
     GraphExecutor,
-    InputNode,
     OpenAIChatNode,
-    OutputNode,
 )
 
 DEFAULT_BASE_URLS = {
@@ -85,9 +85,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def build_chat_graph(message: str, provider_node) -> Graph:
     graph = Graph()
-    graph.add_node("input", InputNode(message))
+    graph.add_node("input", ChatInputNode(message))
     graph.add_node("provider", provider_node)
-    graph.add_node("output", OutputNode())
+    graph.add_node("output", ChatOutputNode())
     graph.connect("input", "text", "provider", "text")
     graph.connect("provider", "text", "output", "text")
     return graph

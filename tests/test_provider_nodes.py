@@ -4,17 +4,17 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import AnthropicMessagesNode, InputNode, OpenAIChatNode, OutputNode
+from flainbot import AnthropicMessagesNode, ChatInputNode, ChatOutputNode, OpenAIChatNode
 
 
 class ProviderNodeTests(unittest.TestCase):
-    def test_input_node_outputs_user_text(self):
-        outputs = InputNode("hello").run({})
+    def test_chat_input_node_outputs_user_text(self):
+        outputs = ChatInputNode("hello").run({})
 
         self.assertEqual(outputs, {"text": "hello"})
 
-    def test_output_node_returns_reply_target(self):
-        outputs = OutputNode().run({"text": "reply"})
+    def test_chat_output_node_returns_reply_target(self):
+        outputs = ChatOutputNode().run({"text": "reply"})
 
         self.assertEqual(outputs, {"reply": "reply"})
 

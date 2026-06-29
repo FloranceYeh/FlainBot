@@ -56,6 +56,13 @@ button:hover {
   background: #ffffff;
 }
 
+.topbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .topbar h1,
 .panel h2 {
   margin: 0;
@@ -133,6 +140,7 @@ button:hover {
 }
 
 .node-card button,
+#save-graph,
 #copy-code {
   background: var(--accent);
   border-color: var(--accent);
@@ -140,6 +148,7 @@ button:hover {
 }
 
 .node-card button:hover,
+#save-graph:hover,
 #copy-code:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
@@ -342,4 +351,3 @@ code {
     grid-column: auto;
   }
 }
-

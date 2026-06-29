@@ -6,8 +6,8 @@ Request = dict[str, Any]
 Response = dict[str, Any]
 
 
-class InputNode:
-    name = "input"
+class ChatInputNode:
+    name = "chat_input"
 
     def __init__(self, text: str) -> None:
         self.text = text
@@ -16,8 +16,8 @@ class InputNode:
         return {"text": self.text}
 
 
-class OutputNode:
-    name = "output"
+class ChatOutputNode:
+    name = "chat_output"
 
     def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
         return {"reply": inputs["text"]}

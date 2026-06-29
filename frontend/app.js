@@ -1,14 +1,12 @@
 const nodeCatalog = [
   {
-    type: "input",
-    className: "InputNode",
+    type: "chat_input",
+    className: "ChatInputNode",
     title: "Web Chat Input",
     description: "Reads the user's message from the web chat input.",
     inputs: [],
     outputs: ["text"],
-    defaults: {
-      text: "hello",
-    },
+    defaults: {},
   },
   {
     type: "openai",
@@ -19,7 +17,7 @@ const nodeCatalog = [
     outputs: ["text", "request", "response"],
     defaults: {
       base_url: "https://api.openai.com/v1",
-      api_key_env: "OPENAI_API_KEY",
+      api_key: "",
       model: "gpt-4.1-mini",
     },
   },
@@ -32,13 +30,13 @@ const nodeCatalog = [
     outputs: ["text", "request", "response"],
     defaults: {
       base_url: "https://api.anthropic.com/v1",
-      api_key_env: "ANTHROPIC_API_KEY",
+      api_key: "",
       model: "claude-sonnet-4-5",
     },
   },
   {
-    type: "output",
-    className: "OutputNode",
+    type: "chat_output",
+    className: "ChatOutputNode",
     title: "Web Chat Output",
     description: "Sends model text to the web chat message list.",
     inputs: ["text"],
@@ -211,7 +209,7 @@ function renderProperties(node) {
       ${entries.map(([key, value]) => `
         <div class="field">
           <label>${key}</label>
-          <input data-prop-key="${key}" value="${value}">
+          <input data-prop-key="${key}" value="${value}" ${key === "api_key" ? 'type="password"' : ""}>
         </div>
       `).join("")}
     </div>
@@ -301,36 +299,59 @@ function quote(value) {
 }
 
 function nodeToPython(node) {
-  if (node.type === "input") {
-    return `graph.add_node(${quote(node.id)}, InputNode(${quote(node.props.text)}))`;
+  if (node.type === "chat_input") {
+    return `graph.add_node(${quote(node.id)}, ChatInputNode("message from web chat"))`;
   }
 
   if (node.type === "openai" || node.type === "anthropic") {
     return `graph.add_node(${quote(node.id)}, ${node.className}(\n` +
       `    base_url=${quote(node.props.base_url)},\n` +
-      `    api_key=os.environ[${quote(node.props.api_key_env)}],\n` +
+      `    api_key=${quote(node.props.api_key)},\n` +
       `    model=${quote(node.props.model)},\n` +
       "))";
   }
 
-  return `graph.add_node(${quote(node.id)}, OutputNode())`;
+  return `graph.add_node(${quote(node.id)}, ChatOutputNode())`;
 }
 
 function generatePython() {
   const imports = new Set(["Graph", "GraphExecutor"]);
   graph.nodes.forEach((node) => imports.add(node.className));
-  const needsOs = graph.nodes.some((node) => node.props.api_key_env);
   const importLine = `from flainbot import ${Array.from(imports).sort().join(", ")}`;
   const nodeLines = graph.nodes.length > 0 ? graph.nodes.map(nodeToPython).join("\n") : "# Add nodes in the planner";
   const edgeLines = graph.edges.map((edge) => (
     `graph.connect(${quote(edge.from_node)}, ${quote(edge.from_port)}, ${quote(edge.to_node)}, ${quote(edge.to_port)})`
   )).join("\n");
 
-  return `${needsOs ? "import os\n\n" : ""}${importLine}\n\n\ngraph = Graph()\n${nodeLines}\n${edgeLines ? `${edgeLines}\n` : ""}outputs = GraphExecutor(graph).run()\nprint(outputs)\n`;
+  return `${importLine}\n\n\ngraph = Graph()\n${nodeLines}\n${edgeLines ? `${edgeLines}\n` : ""}outputs = GraphExecutor(graph).run()\nprint(outputs)\n`;
 }
 
 function renderCode() {
   pythonCodeEl.textContent = generatePython();
+}
+
+function serializeGraph() {
+  return {
+    nodes: graph.nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      props: node.props,
+      x: node.x,
+      y: node.y,
+    })),
+    edges: graph.edges,
+  };
+}
+
+async function saveGraph() {
+  const response = await fetch("/api/graph", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(serializeGraph()),
+  });
+  if (!response.ok) {
+    throw new Error(`save failed: ${response.status}`);
+  }
 }
 
 function render() {
@@ -349,10 +370,13 @@ document.getElementById("copy-code").addEventListener("click", async () => {
   await navigator.clipboard.writeText(pythonCodeEl.textContent);
 });
 
+document.getElementById("save-graph").addEventListener("click", async () => {
+  await saveGraph();
+});
+
 canvasEl.addEventListener("pointermove", dragMove);
 canvasEl.addEventListener("pointerup", dragEnd);
 canvasEl.addEventListener("pointercancel", dragEnd);
 
 renderLibrary();
 render();
-

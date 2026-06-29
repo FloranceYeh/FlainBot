@@ -6,34 +6,73 @@ import os
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import sys
-from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from flainbot import GraphExecutor
+from flainbot.config import build_graph_from_config
 from scripts.smoke_chat import DEFAULT_MODELS, build_chat_graph, build_node
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
 
 
-def run_chat(message: str, graph_runner: Callable[[str], dict]) -> dict[str, str]:
-    outputs = graph_runner(message)
-    return {"reply": outputs["output"]["reply"]}
+class GraphConfigStore:
+    def __init__(self, initial_config: dict | None = None) -> None:
+        self._config = initial_config or {"nodes": [], "edges": []}
+
+    def save(self, config: dict) -> None:
+        self._config = config
+
+    def load(self) -> dict:
+        return self._config
 
 
-def make_graph_runner(provider: str, model: str, base_url: str | None):
-    def graph_runner(message: str) -> dict:
-        node = build_node(provider, os.environ, base_url, model)
-        graph = build_chat_graph(message, node)
-        return GraphExecutor(graph).run()
-
-    return graph_runner
+def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
+    graph = build_graph_from_config(store.load(), message=message, transports=transports)
+    outputs = GraphExecutor(graph).run()
+    reply_node_id = find_chat_output_node_id(store.load())
+    return {"reply": outputs[reply_node_id]["reply"]}
 
 
-def make_handler(graph_runner: Callable[[str], dict]):
+def find_chat_output_node_id(config: dict) -> str:
+    for node in config.get("nodes", []):
+        if node["type"] == "chat_output":
+            return node["id"]
+    raise ValueError("graph config must include a chat_output node")
+
+
+def default_graph_config(provider: str, model: str, base_url: str | None) -> dict:
+    api_key_env = "OPENAI_API_KEY" if provider == "openai" else "ANTHROPIC_API_KEY"
+    provider_node = {
+        "id": f"{provider}_1",
+        "type": provider,
+        "props": {
+            "base_url": base_url or ("https://api.openai.com/v1" if provider == "openai" else "https://api.anthropic.com/v1"),
+            "api_key_env": api_key_env,
+            "model": model,
+        },
+    }
+    return {
+        "nodes": [
+            {"id": "chat_input_1", "type": "chat_input", "props": {}, "x": 48, "y": 48},
+            provider_node,
+            {"id": "chat_output_1", "type": "chat_output", "props": {}, "x": 680, "y": 48},
+        ],
+        "edges": [
+            {"from_node": "chat_input_1", "from_port": "text", "to_node": provider_node["id"], "to_port": "text"},
+            {"from_node": provider_node["id"], "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+        ],
+    }
+
+
+def make_handler(store: GraphConfigStore):
     class WebChatHandler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
+            if self.path == "/api/graph":
+                self.send_json(store.load())
+                return
+
             path = "/chat.html" if self.path == "/" else self.path
             file_path = (FRONTEND / path.lstrip("/")).resolve()
             if not str(file_path).startswith(str(FRONTEND.resolve())):
@@ -51,15 +90,25 @@ def make_handler(graph_runner: Callable[[str], dict]):
             self.wfile.write(body)
 
         def do_POST(self) -> None:
+            if self.path == "/api/graph":
+                payload = self.read_json()
+                store.save(payload)
+                self.send_json({"status": "ok"})
+                return
+
             if self.path != "/api/chat":
                 self.send_error(404)
                 return
 
-            length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(length).decode("utf-8"))
-            response = run_chat(payload["message"], graph_runner)
-            body = json.dumps(response).encode("utf-8")
+            payload = self.read_json()
+            self.send_json(run_chat(payload["message"], store))
 
+        def read_json(self) -> dict:
+            length = int(self.headers.get("Content-Length", "0"))
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+
+        def send_json(self, payload: dict) -> None:
+            body = json.dumps(payload).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
@@ -95,8 +144,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     model = args.model or DEFAULT_MODELS[args.provider]
-    runner = make_graph_runner(args.provider, model, args.base_url)
-    server = ThreadingHTTPServer((args.host, args.port), make_handler(runner))
+    store = GraphConfigStore(default_graph_config(args.provider, model, args.base_url))
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(store))
     print(f"FlainBot web chat: http://{args.host}:{args.port}/")
     server.serve_forever()
     return 0
@@ -104,4 +153,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
