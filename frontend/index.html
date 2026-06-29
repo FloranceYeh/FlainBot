@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FlainBot Node Planner</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>FlainBot Node Planner</h1>
+        <p>View available nodes and plan a linear chatbot chain.</p>
+      </div>
+      <button id="reset-chain" type="button">Reset</button>
+    </header>
+
+    <main class="workspace">
+      <section class="panel node-library" aria-labelledby="library-title">
+        <h2 id="library-title">Node Library</h2>
+        <div id="node-library" class="node-list"></div>
+      </section>
+
+      <section class="panel chain-panel" aria-labelledby="chain-title">
+        <div class="section-header">
+          <h2 id="chain-title">Chain Plan</h2>
+          <span id="chain-count" class="count">0 nodes</span>
+        </div>
+        <div id="chain-list" class="chain-list"></div>
+      </section>
+
+      <section class="panel inspector" aria-labelledby="inspector-title">
+        <h2 id="inspector-title">Node Properties</h2>
+        <div id="property-editor" class="property-editor"></div>
+      </section>
+
+      <section class="panel code-panel" aria-labelledby="code-title">
+        <div class="section-header">
+          <h2 id="code-title">Generated Python</h2>
+          <button id="copy-code" type="button">Copy</button>
+        </div>
+        <pre><code id="python-code"></code></pre>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+

@@ -60,6 +60,11 @@ pipeline.insert_after("build_reply", SegmentMessage())
 python -m unittest -v
 ```
 
+## Node Planner
+
+Open `frontend/index.html` in a browser to view available nodes and plan a
+linear chain. The page runs locally without a dev server.
+
 ## Real Chain Smoke Test
 
 OpenAI:
