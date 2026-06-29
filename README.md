@@ -59,3 +59,25 @@ pipeline.insert_after("build_reply", SegmentMessage())
 ```powershell
 python -m unittest -v
 ```
+
+## Real Chain Smoke Test
+
+OpenAI:
+
+```powershell
+$env:OPENAI_API_KEY="sk-..."
+python scripts/smoke_chat.py openai --model gpt-4.1-mini
+```
+
+Anthropic:
+
+```powershell
+$env:ANTHROPIC_API_KEY="sk-ant-..."
+python scripts/smoke_chat.py anthropic --model claude-sonnet-4-5
+```
+
+Compatible gateways can override the base URL:
+
+```powershell
+python scripts/smoke_chat.py openai --base-url https://example.com/v1 --model your-model
+```
