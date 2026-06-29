@@ -10,7 +10,7 @@
     <header class="topbar">
       <div>
         <h1>FlainBot Node Planner</h1>
-        <p>View available nodes and plan a chatbot graph.</p>
+        <p>Drag nodes on the canvas and connect output ports to input ports.</p>
       </div>
       <button id="reset-graph" type="button">Reset</button>
     </header>
@@ -23,15 +23,19 @@
 
       <section class="panel graph-panel" aria-labelledby="graph-title">
         <div class="section-header">
-          <h2 id="graph-title">Graph Plan</h2>
+          <h2 id="graph-title">Graph Canvas</h2>
           <span id="graph-count" class="count">0 nodes</span>
         </div>
-        <div id="graph-list" class="graph-list"></div>
-      </section>
-
-      <section class="panel inspector" aria-labelledby="inspector-title">
-        <h2 id="inspector-title">Node Properties</h2>
-        <div id="property-editor" class="property-editor"></div>
+        <div id="graph-canvas" class="graph-canvas">
+          <svg id="edge-layer" class="edge-layer">
+            <defs>
+              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7"></polygon>
+              </marker>
+            </defs>
+          </svg>
+          <div id="node-layer" class="node-layer"></div>
+        </div>
       </section>
 
       <section class="panel code-panel" aria-labelledby="code-title">
@@ -46,3 +50,4 @@
     <script src="app.js"></script>
   </body>
 </html>
+

@@ -49,11 +49,14 @@ const nodeCatalog = [
 
 let graph = {nodes: [], edges: []};
 let selectedId = null;
+let pendingOutput = null;
+let dragState = null;
 
 const libraryEl = document.getElementById("node-library");
-const graphEl = document.getElementById("graph-list");
+const canvasEl = document.getElementById("graph-canvas");
+const nodeLayerEl = document.getElementById("node-layer");
+const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
-const propertyEditorEl = document.getElementById("property-editor");
 const pythonCodeEl = document.getElementById("python-code");
 
 function nextId(type) {
@@ -67,6 +70,7 @@ function cloneDefaults(defaults) {
 
 function addNode(type) {
   const spec = nodeCatalog.find((node) => node.type === type);
+  const offset = graph.nodes.length * 28;
   const item = {
     id: nextId(spec.type),
     type: spec.type,
@@ -76,6 +80,8 @@ function addNode(type) {
     inputs: spec.inputs,
     outputs: spec.outputs,
     props: cloneDefaults(spec.defaults),
+    x: 48 + offset,
+    y: 48 + offset,
   };
   graph.nodes.push(item);
   selectedId = item.id;
@@ -97,7 +103,6 @@ function updateProperty(id, key, value) {
     return;
   }
   node.props[key] = value;
-  renderGraph();
   renderCode();
 }
 
@@ -106,11 +111,7 @@ function addEdge(fromNode, fromPort, toNode, toPort) {
     return;
   }
   graph.edges.push({from_node: fromNode, from_port: fromPort, to_node: toNode, to_port: toPort});
-  render();
-}
-
-function removeEdge(index) {
-  graph.edges.splice(index, 1);
+  pendingOutput = null;
   render();
 }
 
@@ -130,147 +131,168 @@ function renderLibrary() {
   });
 }
 
-function renderGraph() {
-  graphEl.innerHTML = "";
+function renderCanvas() {
+  nodeLayerEl.innerHTML = "";
   graphCountEl.textContent = `${graph.nodes.length} nodes / ${graph.edges.length} edges`;
-
-  if (graph.nodes.length === 0) {
-    graphEl.innerHTML = '<div class="empty-state">Add nodes from the library to plan a graph.</div>';
-    return;
-  }
 
   graph.nodes.forEach((node) => {
     const item = document.createElement("article");
     item.className = `graph-node${node.id === selectedId ? " selected" : ""}`;
+    item.style.left = `${node.x}px`;
+    item.style.top = `${node.y}px`;
+    item.dataset.nodeId = node.id;
     item.innerHTML = `
-      <div>
+      <div class="node-header" data-drag-handle="true">
         <span class="node-type">${node.id} / ${node.className}</span>
         <h3>${node.title}</h3>
-        <p>${node.description}</p>
-        <p>Inputs: ${node.inputs.join(", ") || "none"} / Outputs: ${node.outputs.join(", ") || "none"}</p>
       </div>
-      <div class="graph-actions">
-        <button type="button" data-action="select">Select</button>
-        <button type="button" data-action="remove" class="danger">Remove</button>
+      <div class="node-body">
+        <div class="ports">
+          <div class="port-column">
+            <span class="port-title">Inputs</span>
+            ${renderPorts(node, "input")}
+          </div>
+          <div class="port-column">
+            <span class="port-title">Outputs</span>
+            ${renderPorts(node, "output")}
+          </div>
+        </div>
+        ${renderProperties(node)}
+        <div class="node-actions">
+          <button type="button" class="danger" data-action="remove">Remove</button>
+        </div>
       </div>
     `;
-    item.querySelector('[data-action="select"]').addEventListener("click", () => {
-      selectedId = node.id;
-      render();
-    });
+    item.querySelector(".node-header").addEventListener("pointerdown", (event) => startDrag(event, node.id));
     item.querySelector('[data-action="remove"]').addEventListener("click", () => removeNode(node.id));
-    graphEl.appendChild(item);
+    item.querySelectorAll(".port").forEach((port) => {
+      port.addEventListener("click", () => handlePortClick(port));
+    });
+    item.querySelectorAll("[data-prop-key]").forEach((input) => {
+      input.addEventListener("input", (event) => updateProperty(node.id, event.target.dataset.propKey, event.target.value));
+    });
+    item.addEventListener("pointerdown", () => {
+      selectedId = node.id;
+      renderSelection();
+    });
+    nodeLayerEl.appendChild(item);
   });
 
-  renderEdgeBuilder();
   renderEdges();
 }
 
-function optionList(nodes, direction) {
-  return nodes
-    .filter((node) => direction === "from" ? node.outputs.length > 0 : node.inputs.length > 0)
-    .map((node) => `<option value="${node.id}">${node.id}</option>`)
-    .join("");
+function renderPorts(node, direction) {
+  const ports = direction === "input" ? node.inputs : node.outputs;
+  if (ports.length === 0) {
+    return '<span class="node-type">none</span>';
+  }
+  return ports.map((port) => {
+    const pending = pendingOutput && pendingOutput.nodeId === node.id && pendingOutput.port === port;
+    return `
+      <button
+        type="button"
+        class="port ${direction}${pending ? " pending" : ""}"
+        data-node-id="${node.id}"
+        data-port="${port}"
+        data-direction="${direction}"
+      >${port}</button>
+    `;
+  }).join("");
 }
 
-function renderEdgeBuilder() {
-  const builder = document.createElement("article");
-  builder.className = "node-card";
-  builder.innerHTML = `
-    <h3>Connect Ports</h3>
-    <div class="field">
-      <label>From node</label>
-      <select id="from-node">${optionList(graph.nodes, "from")}</select>
-    </div>
-    <div class="field">
-      <label>From port</label>
-      <select id="from-port"></select>
-    </div>
-    <div class="field">
-      <label>To node</label>
-      <select id="to-node">${optionList(graph.nodes, "to")}</select>
-    </div>
-    <div class="field">
-      <label>To port</label>
-      <select id="to-port"></select>
-    </div>
-    <button type="button">Connect</button>
-  `;
-
-  const fromNode = builder.querySelector("#from-node");
-  const fromPort = builder.querySelector("#from-port");
-  const toNode = builder.querySelector("#to-node");
-  const toPort = builder.querySelector("#to-port");
-
-  function syncPorts() {
-    const source = graph.nodes.find((node) => node.id === fromNode.value);
-    const target = graph.nodes.find((node) => node.id === toNode.value);
-    fromPort.innerHTML = (source?.outputs ?? []).map((port) => `<option value="${port}">${port}</option>`).join("");
-    toPort.innerHTML = (target?.inputs ?? []).map((port) => `<option value="${port}">${port}</option>`).join("");
+function renderProperties(node) {
+  const entries = Object.entries(node.props);
+  if (entries.length === 0) {
+    return "";
   }
 
-  fromNode.addEventListener("change", syncPorts);
-  toNode.addEventListener("change", syncPorts);
-  builder.querySelector("button").addEventListener("click", () => {
-    addEdge(fromNode.value, fromPort.value, toNode.value, toPort.value);
+  return `
+    <div class="node-properties">
+      ${entries.map(([key, value]) => `
+        <div class="field">
+          <label>${key}</label>
+          <input data-prop-key="${key}" value="${value}">
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSelection() {
+  document.querySelectorAll(".graph-node").forEach((node) => {
+    node.classList.toggle("selected", node.dataset.nodeId === selectedId);
   });
-  syncPorts();
-  graphEl.appendChild(builder);
+}
+
+function handlePortClick(port) {
+  const nodeId = port.dataset.nodeId;
+  const portName = port.dataset.port;
+  const direction = port.dataset.direction;
+
+  if (direction === "output") {
+    pendingOutput = {nodeId, port: portName};
+    renderCanvas();
+    renderCode();
+    return;
+  }
+
+  if (direction === "input" && pendingOutput) {
+    addEdge(pendingOutput.nodeId, pendingOutput.port, nodeId, portName);
+  }
+}
+
+function startDrag(event, nodeId) {
+  event.preventDefault();
+  const node = graph.nodes.find((item) => item.id === nodeId);
+  selectedId = nodeId;
+  dragState = {
+    nodeId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: node.x,
+    originY: node.y,
+  };
+  event.currentTarget.setPointerCapture(event.pointerId);
+}
+
+function dragMove(event) {
+  if (!dragState) {
+    return;
+  }
+  const node = graph.nodes.find((item) => item.id === dragState.nodeId);
+  node.x = Math.max(0, dragState.originX + event.clientX - dragState.startX);
+  node.y = Math.max(0, dragState.originY + event.clientY - dragState.startY);
+  const element = nodeLayerEl.querySelector(`[data-node-id="${node.id}"]`);
+  element.style.left = `${node.x}px`;
+  element.style.top = `${node.y}px`;
+  renderEdges();
+}
+
+function dragEnd() {
+  dragState = null;
+}
+
+function portCenter(nodeId, portName, direction) {
+  const selector = `.port[data-node-id="${nodeId}"][data-port="${portName}"][data-direction="${direction}"]`;
+  const port = nodeLayerEl.querySelector(selector);
+  const canvasRect = canvasEl.getBoundingClientRect();
+  const portRect = port.getBoundingClientRect();
+  return {
+    x: portRect.left - canvasRect.left + portRect.width / 2,
+    y: portRect.top - canvasRect.top + portRect.height / 2,
+  };
 }
 
 function renderEdges() {
-  const list = document.createElement("div");
-  list.className = "node-list";
-  graph.edges.forEach((edge, index) => {
-    const item = document.createElement("article");
-    item.className = "graph-node";
-    item.innerHTML = `
-      <div>
-        <span class="node-type">Edge ${index + 1}</span>
-        <h3>${edge.from_node}.${edge.from_port} -> ${edge.to_node}.${edge.to_port}</h3>
-      </div>
-      <div class="graph-actions">
-        <button type="button" class="danger">Remove</button>
-      </div>
-    `;
-    item.querySelector("button").addEventListener("click", () => removeEdge(index));
-    list.appendChild(item);
-  });
-  graphEl.appendChild(list);
-}
-
-function renderProperties() {
-  propertyEditorEl.innerHTML = "";
-  const selected = graph.nodes.find((node) => node.id === selectedId);
-  if (!selected) {
-    propertyEditorEl.innerHTML = '<div class="empty-state">Select a node to edit its properties.</div>';
-    return;
-  }
-
-  const title = document.createElement("div");
-  title.innerHTML = `<strong>${selected.className}</strong>`;
-  propertyEditorEl.appendChild(title);
-
-  const entries = Object.entries(selected.props);
-  if (entries.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.textContent = "This node has no editable properties.";
-    propertyEditorEl.appendChild(empty);
-    return;
-  }
-
-  entries.forEach(([key, value]) => {
-    const field = document.createElement("div");
-    field.className = "field";
-    field.innerHTML = `
-      <label for="${selected.id}-${key}">${key}</label>
-      <input id="${selected.id}-${key}" value="${value}">
-    `;
-    field.querySelector("input").addEventListener("input", (event) => {
-      updateProperty(selected.id, key, event.target.value);
-    });
-    propertyEditorEl.appendChild(field);
+  edgeLayerEl.querySelectorAll("path").forEach((path) => path.remove());
+  graph.edges.forEach((edge) => {
+    const from = portCenter(edge.from_node, edge.from_port, "output");
+    const to = portCenter(edge.to_node, edge.to_port, "input");
+    const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`);
+    path.setAttribute("marker-end", "url(#arrowhead)");
+    edgeLayerEl.appendChild(path);
   });
 }
 
@@ -312,14 +334,14 @@ function renderCode() {
 }
 
 function render() {
-  renderGraph();
-  renderProperties();
+  renderCanvas();
   renderCode();
 }
 
 document.getElementById("reset-graph").addEventListener("click", () => {
   graph = {nodes: [], edges: []};
   selectedId = null;
+  pendingOutput = null;
   render();
 });
 
@@ -327,5 +349,10 @@ document.getElementById("copy-code").addEventListener("click", async () => {
   await navigator.clipboard.writeText(pythonCodeEl.textContent);
 });
 
+canvasEl.addEventListener("pointermove", dragMove);
+canvasEl.addEventListener("pointerup", dragEnd);
+canvasEl.addEventListener("pointercancel", dragEnd);
+
 renderLibrary();
 render();
+

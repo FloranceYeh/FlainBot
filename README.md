@@ -47,8 +47,10 @@ python -m unittest -v
 
 ## Node Planner
 
-Open `frontend/index.html` in a browser to view available nodes and plan a graph.
-The page runs locally without a dev server.
+Open `frontend/index.html` in a browser to view available nodes and plan a graph
+on a draggable canvas. Node properties are edited inside each node, and output
+ports connect to input ports with arrowed edges. The page runs locally without a
+dev server.
 
 ## Web Chat
 
@@ -79,4 +81,3 @@ Compatible gateways can override the base URL:
 ```powershell
 python scripts/smoke_chat.py openai --base-url https://example.com/v1 --model your-model
 ```
-

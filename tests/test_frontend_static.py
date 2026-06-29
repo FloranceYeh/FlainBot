@@ -13,6 +13,10 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("FlainBot Node Planner", html)
         self.assertIn("styles.css", html)
         self.assertIn("app.js", html)
+        self.assertIn("graph-canvas", html)
+        self.assertIn("edge-layer", html)
+        self.assertIn("<marker", html)
+        self.assertNotIn("property-editor", html)
         self.assertIn("OpenAIChatNode", js)
         self.assertIn("AnthropicMessagesNode", js)
         self.assertIn("generatePython", js)
@@ -20,6 +24,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("GraphExecutor", js)
         self.assertIn("graph.connect(", js)
         self.assertIn("Graph()", js)
+        self.assertIn("pointerdown", js)
+        self.assertIn("data-port", js)
+        self.assertIn("marker-end", js)
 
     def test_chat_page_references_assets_and_api(self):
         html = (ROOT / "frontend" / "chat.html").read_text(encoding="utf-8")
