@@ -7,24 +7,15 @@ node interface open for later adapters and extensions.
 ## Minimal Example
 
 ```python
-from flainbot import MessageContext, Pipeline
+from flainbot import MessageContext, Pipeline, RequestNode, ResponseNode
 
 
-class CaptureInput:
-    name = "capture_input"
-
-    def handle(self, context):
-        context.data["captured"] = context.input_text
+def fake_client(request):
+    user_message = request["messages"][-1]["content"]
+    return {"text": f"echo: {user_message}"}
 
 
-class BuildReply:
-    name = "build_reply"
-
-    def handle(self, context):
-        context.output_text = f"echo: {context.data['captured']}"
-
-
-pipeline = Pipeline([CaptureInput(), BuildReply()])
+pipeline = Pipeline([RequestNode(client=fake_client), ResponseNode()])
 context = pipeline.run(MessageContext(input_text="hello"))
 
 print(context.output_text)
@@ -45,4 +36,3 @@ pipeline.insert_after("build_reply", SegmentMessage())
 ```powershell
 python -m unittest -v
 ```
-
