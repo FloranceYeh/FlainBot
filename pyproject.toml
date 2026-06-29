@@ -1,0 +1,11 @@
+[project]
+name = "flainbot"
+version = "0.1.0"
+description = "A developer-facing chatbot framework built around composable event chains."
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
