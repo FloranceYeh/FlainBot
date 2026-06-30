@@ -94,6 +94,25 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_root_serves_single_index_shell(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            with request.urlopen(f"{base_url}/", timeout=5) as response:
+                body = response.read().decode("utf-8")
+
+            self.assertIn("FlainBot Node Planner", body)
+            self.assertIn("FlainBot Chat", body)
+            self.assertIn("app.js", body)
+            self.assertNotIn("chat.js", body)
+        finally:
+            server.shutdown()
+            server.server_close()
+
 
 if __name__ == "__main__":
     unittest.main()

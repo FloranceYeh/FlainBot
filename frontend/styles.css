@@ -63,6 +63,16 @@ button:hover {
   justify-content: flex-end;
 }
 
+.view[hidden] {
+  display: none !important;
+}
+
+.view-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.12);
+}
+
 .topbar h1,
 .panel h2 {
   margin: 0;
@@ -337,6 +347,93 @@ code {
   line-height: 1.55;
 }
 
+.chat-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: min(880px, calc(100% - 32px));
+  min-height: calc(100vh - 92px);
+  margin: 16px auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.chat-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.chat-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.messages {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 420px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.message {
+  max-width: 76%;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+
+.message.user {
+  justify-self: end;
+  background: #e8f2fb;
+}
+
+.message.assistant {
+  justify-self: start;
+  background: #ffffff;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.composer input,
+.composer button {
+  min-height: 40px;
+}
+
+.composer input {
+  min-width: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.composer button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  padding: 8px 14px;
+}
+
+.composer button:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #ffffff;
+}
+
 @media (max-width: 980px) {
   .workspace {
     grid-template-columns: 1fr;
@@ -349,5 +446,10 @@ code {
 
   .code-panel {
     grid-column: auto;
+  }
+
+  .chat-shell {
+    width: auto;
+    min-height: calc(100vh - 112px);
   }
 }

@@ -9,44 +9,60 @@
   <body>
     <header class="topbar">
       <div>
-        <h1>FlainBot Node Planner</h1>
-        <p>Drag nodes on the canvas and connect output ports to input ports.</p>
+        <h1>FlainBot</h1>
+        <p>Plan a graph and test it in the web chat from one workspace.</p>
       </div>
       <div class="topbar-actions">
+        <button class="view-tab" data-route="planner" type="button">Planner</button>
+        <button class="view-tab" data-route="chat" type="button">Chat</button>
         <button id="save-graph" type="button">Save for Web Chat</button>
         <button id="reset-graph" type="button">Reset</button>
       </div>
     </header>
 
-    <main class="workspace">
-      <section class="panel node-library" aria-labelledby="library-title">
-        <h2 id="library-title">Node Library</h2>
-        <div id="node-library" class="node-list"></div>
+    <main>
+      <section id="planner-view" class="workspace view" data-view="planner">
+        <section class="panel node-library" aria-labelledby="library-title">
+          <h2 id="library-title">Node Library</h2>
+          <div id="node-library" class="node-list"></div>
+        </section>
+
+        <section class="panel graph-panel" aria-labelledby="graph-title">
+          <div class="section-header">
+            <h2 id="graph-title">FlainBot Node Planner</h2>
+            <span id="graph-count" class="count">0 nodes</span>
+          </div>
+          <div id="graph-canvas" class="graph-canvas">
+            <svg id="edge-layer" class="edge-layer">
+              <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7"></polygon>
+                </marker>
+              </defs>
+            </svg>
+            <div id="node-layer" class="node-layer"></div>
+          </div>
+        </section>
+
+        <section class="panel code-panel" aria-labelledby="code-title">
+          <div class="section-header">
+            <h2 id="code-title">Generated Python</h2>
+            <button id="copy-code" type="button">Copy</button>
+          </div>
+          <pre><code id="python-code"></code></pre>
+        </section>
       </section>
 
-      <section class="panel graph-panel" aria-labelledby="graph-title">
-        <div class="section-header">
-          <h2 id="graph-title">Graph Canvas</h2>
-          <span id="graph-count" class="count">0 nodes</span>
-        </div>
-        <div id="graph-canvas" class="graph-canvas">
-          <svg id="edge-layer" class="edge-layer">
-            <defs>
-              <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                <polygon points="0 0, 10 3.5, 0 7"></polygon>
-              </marker>
-            </defs>
-          </svg>
-          <div id="node-layer" class="node-layer"></div>
-        </div>
-      </section>
-
-      <section class="panel code-panel" aria-labelledby="code-title">
-        <div class="section-header">
-          <h2 id="code-title">Generated Python</h2>
-          <button id="copy-code" type="button">Copy</button>
-        </div>
-        <pre><code id="python-code"></code></pre>
+      <section id="chat-view" class="view chat-shell" data-view="chat" hidden>
+        <header class="chat-header">
+          <h2>FlainBot Chat</h2>
+          <p>Graph runtime: input node to model node to output node.</p>
+        </header>
+        <section id="messages" class="messages" aria-live="polite"></section>
+        <form id="chat-form" class="composer">
+          <input id="message-input" name="message" autocomplete="off" placeholder="Type a message">
+          <button type="submit">Send</button>
+        </form>
       </section>
     </main>
 

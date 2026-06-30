@@ -56,6 +56,11 @@ const nodeLayerEl = document.getElementById("node-layer");
 const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
 const pythonCodeEl = document.getElementById("python-code");
+const viewEls = document.querySelectorAll("[data-view]");
+const viewTabEls = document.querySelectorAll("[data-route]");
+const chatFormEl = document.getElementById("chat-form");
+const messageInputEl = document.getElementById("message-input");
+const messagesEl = document.getElementById("messages");
 
 function defaultApiBaseUrl() {
   if (window.location.protocol === "file:" || window.location.port === "5500") {
@@ -367,6 +372,54 @@ async function saveGraph() {
   }
 }
 
+function activeViewFromHash() {
+  return window.location.hash === "#chat" ? "chat" : "planner";
+}
+
+function setActiveView(view) {
+  viewEls.forEach((element) => {
+    element.hidden = element.dataset.view !== view;
+  });
+  viewTabEls.forEach((button) => {
+    const active = button.dataset.route === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+
+  if (view === "planner") {
+    requestAnimationFrame(renderEdges);
+  }
+}
+
+function navigateToView(view) {
+  const hash = view === "chat" ? "#chat" : "#planner";
+  if (window.location.hash === hash) {
+    setActiveView(view);
+    return;
+  }
+  window.location.hash = hash;
+}
+
+function appendMessage(role, text) {
+  const item = document.createElement("div");
+  item.className = `message ${role}`;
+  item.textContent = text;
+  messagesEl.appendChild(item);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function sendChatMessage(message) {
+  const response = await fetch(apiUrl("/api/chat"), {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({message}),
+  });
+  if (!response.ok) {
+    throw new Error(`chat failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 function render() {
   renderCanvas();
   renderCode();
@@ -387,9 +440,34 @@ document.getElementById("save-graph").addEventListener("click", async () => {
   await saveGraph();
 });
 
+viewTabEls.forEach((button) => {
+  button.addEventListener("click", () => navigateToView(button.dataset.route));
+});
+
+window.addEventListener("hashchange", () => setActiveView(activeViewFromHash()));
+
+chatFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const message = messageInputEl.value.trim();
+  if (!message) {
+    return;
+  }
+
+  messageInputEl.value = "";
+  appendMessage("user", message);
+
+  try {
+    const payload = await sendChatMessage(message);
+    appendMessage("assistant", payload.reply);
+  } catch (error) {
+    appendMessage("assistant", `Request failed: ${error.message}`);
+  }
+});
+
 canvasEl.addEventListener("pointermove", dragMove);
 canvasEl.addEventListener("pointerup", dragEnd);
 canvasEl.addEventListener("pointercancel", dragEnd);
 
 renderLibrary();
 render();
+setActiveView(activeViewFromHash());

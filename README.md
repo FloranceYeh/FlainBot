@@ -53,6 +53,8 @@ ports connect to input ports with arrowed edges. The page runs locally without a
 dev server for visual editing. To save the active graph for web chat, run
 `scripts/web_chat.py`; the static planner will call its API on
 `http://127.0.0.1:8765` when opened from `file://` or a `5500` live server.
+The same `index.html` also contains the chat view; switch with the top
+navigation or open `frontend/index.html#chat`.
 
 ## Web Chat
 
@@ -71,6 +73,7 @@ python scripts/web_chat.py anthropic --model claude-sonnet-4-5
 ```
 
 Then open the printed local URL in a browser.
+Use the Chat tab or `http://127.0.0.1:8765/#chat` to talk to the active graph.
 
 ## Real Graph Smoke Test
 

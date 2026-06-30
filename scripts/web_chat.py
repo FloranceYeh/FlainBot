@@ -73,7 +73,7 @@ def make_handler(store: GraphConfigStore):
                 self.send_json(store.load())
                 return
 
-            path = "/chat.html" if self.path == "/" else self.path
+            path = "/index.html" if self.path == "/" else self.path
             file_path = (FRONTEND / path.lstrip("/")).resolve()
             if not str(file_path).startswith(str(FRONTEND.resolve())):
                 self.send_error(404)

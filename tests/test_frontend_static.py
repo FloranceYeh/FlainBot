@@ -34,15 +34,27 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn("api_key", js)
 
-    def test_chat_page_references_assets_and_api(self):
-        html = (ROOT / "frontend" / "chat.html").read_text(encoding="utf-8")
-        js = (ROOT / "frontend" / "chat.js").read_text(encoding="utf-8")
+    def test_chat_view_is_in_single_index_shell(self):
+        html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "frontend" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
 
         self.assertIn("FlainBot Chat", html)
-        self.assertIn("chat.css", html)
-        self.assertIn("chat.js", html)
+        self.assertIn("data-view=\"chat\"", html)
+        self.assertIn("id=\"chat-form\"", html)
+        self.assertIn("id=\"messages\"", html)
+        self.assertNotIn("chat.css", html)
+        self.assertNotIn("chat.js", html)
+        self.assertIn("setActiveView", js)
+        self.assertIn("hashchange", js)
         self.assertIn("apiUrl(\"/api/chat\")", js)
         self.assertIn("127.0.0.1:8765", js)
+        self.assertIn(".chat-shell", css)
+
+    def test_standalone_chat_assets_were_removed(self):
+        self.assertFalse((ROOT / "frontend" / "chat.html").exists())
+        self.assertFalse((ROOT / "frontend" / "chat.js").exists())
+        self.assertFalse((ROOT / "frontend" / "chat.css").exists())
 
 
 if __name__ == "__main__":
