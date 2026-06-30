@@ -121,43 +121,20 @@ export function quote(value) {
   return JSON.stringify(value);
 }
 
-export function nodeToPython(node, providers, personas) {
-  if (node.type === "chat_input") {
-    return `graph.add_node(${quote(node.id)}, ChatInputNode("message from web chat"))`;
-  }
-
-  if (node.type === "provider_call") {
-    const provider = providers.find((item) => item.id === node.props.provider_id) || {id: node.props.provider_id};
-    return `graph.add_node(${quote(node.id)}, ProviderCallNode(provider=${quote(provider)}))`;
-  }
-
-  if (node.type === "prompt_builder") {
-    return `graph.add_node(${quote(node.id)}, PromptBuilderNode(\n`
-      + `    system_prompt=${quote(node.props.system_prompt)},\n`
-      + `    user_prompt=${quote(node.props.user_prompt)},\n`
-      + `    tools_json=${quote(node.props.tools_json)},\n`
-      + `    contexts_json=${quote(node.props.contexts_json)},\n`
-      + "))";
-  }
-
-  if (node.type === "persona") {
-    const persona = personas.find((item) => item.persona_id === node.props.persona_id) || {persona_id: node.props.persona_id};
-    return `graph.add_node(${quote(node.id)}, PersonaNode(persona=${quote(persona)}))`;
-  }
-
-  return `graph.add_node(${quote(node.id)}, ChatOutputNode())`;
-}
-
 export function generatePython(graph, providers, personas) {
-  const imports = new Set(["Graph", "GraphExecutor"]);
-  graph.nodes.forEach((node) => imports.add(node.className));
-  const importLine = `from flainbot import ${Array.from(imports).sort().join(", ")}`;
-  const nodeLines = graph.nodes.length > 0 ? graph.nodes.map((node) => nodeToPython(node, providers, personas)).join("\n") : "# Add nodes in the planner";
-  const edgeLines = graph.edges.map((edge) => (
-    `graph.connect(${quote(edge.from_node)}, ${quote(edge.from_port)}, ${quote(edge.to_node)}, ${quote(edge.to_port)})`
-  )).join("\n");
+  const config = {
+    nodes: graph.nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      props: node.props || {},
+    })),
+    edges: graph.edges,
+    providers,
+    personas,
+  };
+  const configJson = JSON.stringify(config, null, 2);
 
-  return `${importLine}\n\n\ngraph = Graph()\n${nodeLines}\n${edgeLines ? `${edgeLines}\n` : ""}outputs = GraphExecutor(graph).run()\nprint(outputs)\n`;
+  return `import json\n\nfrom flainbot import GraphExecutor\nfrom flainbot.config import build_graph_from_config\n\n\nconfig = json.loads(${quote(configJson)})\ngraph = build_graph_from_config(config, message="message from web chat")\noutputs = GraphExecutor(graph).run()\nprint(outputs)\n`;
 }
 
 export function parseJsonOrEmpty(value, emptyValue) {

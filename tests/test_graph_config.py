@@ -265,6 +265,34 @@ class GraphConfigTests(unittest.TestCase):
         self.assertEqual(outputs["persona_1"]["json"]["system_prompt"], "You are a cat.")
         self.assertEqual(outputs["persona_1"]["json"]["prompt"], "hello")
 
+    def test_build_graph_from_config_executes_external_node(self):
+        config = {
+            "nodes": [
+                {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                {"id": "meow_1", "type": "meow_before_punctuation", "props": {}},
+                {"id": "chat_output_1", "type": "chat_output", "props": {}},
+            ],
+            "edges": [
+                {
+                    "from_node": "chat_input_1",
+                    "from_port": "text",
+                    "to_node": "meow_1",
+                    "to_port": "text",
+                },
+                {
+                    "from_node": "meow_1",
+                    "from_port": "text",
+                    "to_node": "chat_output_1",
+                    "to_port": "text",
+                },
+            ],
+        }
+
+        graph = build_graph_from_config(config, message="你好，世界!")
+        outputs = GraphExecutor(graph).run()
+
+        self.assertEqual(outputs["chat_output_1"]["reply"], "你好喵，世界喵!")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -243,7 +243,6 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("PromptBuilderNode", class_names)
             self.assertIn("PersonaNode", class_names)
             self.assertIn("ProviderCallNode", class_names)
-            self.assertTrue(all(node["package"] == "core" for node in nodes))
             def port_names(ports):
                 return [port["name"] for port in ports]
 
@@ -275,6 +274,14 @@ class WebChatTests(unittest.TestCase):
             self.assertEqual(port_names(persona["outputs"]), ["json"])
             self.assertEqual(port_types(persona["outputs"]), ["json"])
             self.assertIn("persona_id", persona["defaults"])
+            meow = next(node for node in nodes if node["type"] == "meow_before_punctuation")
+            self.assertEqual(meow["package"], "sample_text_tools")
+            self.assertEqual(port_names(meow["inputs"]), ["text"])
+            self.assertEqual(port_types(meow["inputs"]), ["text"])
+            self.assertEqual(port_names(meow["outputs"]), ["text"])
+            self.assertEqual(port_types(meow["outputs"]), ["text"])
+            core_nodes = [node for node in nodes if node["type"] != "meow_before_punctuation"]
+            self.assertTrue(all(node["package"] == "core" for node in core_nodes))
             self.assertTrue(all("inputs" in node and "outputs" in node for node in nodes))
         finally:
             server.shutdown()

@@ -6,13 +6,14 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "src"))
 
 from flainbot import GraphExecutor
 from flainbot.config import build_graph_from_config
 from flainbot.node_registry import discover_node_registry
 
-ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
 VUE_DIST = FRONTEND / "dist"
 VUE_ENTRY = ROOT / "index.html"

@@ -66,6 +66,35 @@ class NodeRegistryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported node type: missing"):
             registry.build({"id": "missing_1", "type": "missing", "props": {}}, context)
 
+    def test_discovers_external_node_package_and_builds_sample_node(self):
+        registry = discover_node_registry(external_package_names=["external_nodes"])
+        context = NodeBuildContext(message="", transports={}, providers={}, personas={})
+
+        catalog = registry.catalog()
+        package_ids = [package["id"] for package in catalog]
+        self.assertIn("sample_text_tools", package_ids)
+        sample_package = next(package for package in catalog if package["id"] == "sample_text_tools")
+        node_types = {node["type"] for node in collect_nodes(sample_package["items"])}
+        self.assertIn("meow_before_punctuation", node_types)
+
+        node = registry.build(
+            {"id": "meow_1", "type": "meow_before_punctuation", "props": {}},
+            context,
+        )
+
+        self.assertEqual(node.run({"text": "你好，世界!"}), {"text": "你好喵，世界喵!"})
+
+    def test_can_disable_external_node_package_discovery(self):
+        registry = discover_node_registry(external_package_names=[])
+
+        node_types = {
+            node["type"]
+            for package in registry.catalog()
+            for node in collect_nodes(package["items"])
+        }
+
+        self.assertNotIn("meow_before_punctuation", node_types)
+
 
 if __name__ == "__main__":
     unittest.main()

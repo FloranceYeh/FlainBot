@@ -52,14 +52,34 @@ class NodePackageRegistry:
         return builder(node_config, context)
 
 
-def discover_node_registry(package_name: str = "flainbot.node_packages") -> NodePackageRegistry:
-    package = importlib.import_module(package_name)
+def discover_node_registry(
+    package_name: str = "flainbot.node_packages",
+    external_package_names: list[str] | tuple[str, ...] | None = None,
+) -> NodePackageRegistry:
     registry = NodePackageRegistry()
+    register_modules_from_package(registry, package_name, required=True)
+    external_names = ("external_nodes",) if external_package_names is None else external_package_names
+    for external_package_name in external_names:
+        register_modules_from_package(registry, external_package_name, required=False)
+    return registry
 
+
+def register_modules_from_package(
+    registry: NodePackageRegistry,
+    package_name: str,
+    required: bool,
+) -> None:
+    try:
+        package = importlib.import_module(package_name)
+    except ModuleNotFoundError as exc:
+        if not required and exc.name == package_name:
+            return
+        raise
+
+    if not hasattr(package, "__path__"):
+        raise ValueError(f"node package namespace must be a package: {package_name}")
     for module_info in pkgutil.iter_modules(package.__path__):
         module = importlib.import_module(f"{package_name}.{module_info.name}")
         node_package = module.get_node_package()
         node_builders = module.get_node_builders()
         registry.register_package(node_package, node_builders)
-
-    return registry

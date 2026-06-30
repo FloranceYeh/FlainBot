@@ -39,6 +39,11 @@ Any object with `name: str` and `run(inputs: Mapping[str, Any]) -> dict[str, Any
 can be used as a node. A node receives values from connected input ports and
 returns values for its output ports.
 
+External node packages can be added under `external_nodes/`. Each module exposes
+`get_node_package()` for frontend metadata and `get_node_builders()` for runtime
+construction. See `docs/external_nodes.md` and
+`external_nodes/sample_text_tools.py`.
+
 ## Tests
 
 ```powershell

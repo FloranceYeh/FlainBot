@@ -95,6 +95,26 @@ const python = generatePython(
   [{persona_id: "cat", system_prompt: "Meow"}],
 );
 
-if (!python.includes("PersonaNode") || !python.includes("GraphExecutor")) {
-  throw new Error("generated python should include graph imports and persona node construction");
+if (!python.includes("build_graph_from_config") || !python.includes("GraphExecutor")) {
+  throw new Error("generated python should build graphs from registry-backed config");
+}
+
+const externalPython = generatePython(
+  {
+    nodes: [
+      {
+        id: "meow_1",
+        type: "meow_before_punctuation",
+        className: "MeowBeforePunctuationNode",
+        props: {},
+      },
+    ],
+    edges: [],
+  },
+  [],
+  [],
+);
+
+if (!externalPython.includes("meow_before_punctuation") || externalPython.includes("ChatOutputNode()")) {
+  throw new Error("generated python should preserve external node types");
 }
