@@ -313,13 +313,7 @@ main {
   display: inline-block;
   white-space: nowrap;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.result-toggle-hint {
-  color: var(--accent);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -335,24 +329,14 @@ main {
   writing-mode: vertical-rl;
 }
 
-.result-rail:not(.collapsed) .result-toggle-hint {
-  display: none;
-}
-
 .result-rail.collapsed .result-section {
   display: none;
-}
-
-.result-section > summary {
-  cursor: pointer;
-  padding: 12px;
-  font-weight: 600;
 }
 
 .result-actions {
   display: flex;
   justify-content: flex-end;
-  padding: 0 12px 12px;
+  padding: 12px;
 }
 
 .result-section pre {
