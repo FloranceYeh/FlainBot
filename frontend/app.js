@@ -697,12 +697,13 @@ document.getElementById("reset-graph").addEventListener("click", () => {
 
 providerFormEl.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const provider = providerFromForm(event.currentTarget);
+  const form = event.currentTarget;
+  const provider = providerFromForm(form);
   providers = providers.filter((item) => item.id !== provider.id);
   providers.push(provider);
   try {
     await saveProviders();
-    event.currentTarget.reset();
+    form.reset();
     renderProviders();
     render();
     setStatus("Provider saved.", "success");
