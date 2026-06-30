@@ -66,8 +66,8 @@
               <h3>{{ packageItem.title }}</h3>
               <p>{{ packageItem.description }}</p>
               <template v-for="item in packageItem.items" :key="`${packageItem.id}-${item.id || item.type}`">
-                <CatalogGroup v-if="item.kind === 'group'" :item="item" :depth="0" @add-node="addNode" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
-                <NodeCard v-else-if="item.kind === 'node'" :node="item" @add-node="addNode" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
+                <CatalogGroup v-if="item.kind === 'group'" :item="item" :depth="0" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
+                <NodeCard v-else-if="item.kind === 'node'" :node="item" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
               </template>
             </section>
           </div>
@@ -92,6 +92,8 @@
             @pointercancel="handleCanvasPointerUp"
             @wheel.prevent="zoomCanvas"
             @pointerdown="startCanvasPan"
+            @dragover.prevent
+            @drop.prevent="handleCanvasDrop"
           >
             <div id="canvas-space" class="canvas-space" data-canvas-space :style="canvasSpaceStyle">
               <svg id="edge-layer" class="edge-layer">
@@ -413,15 +415,28 @@ const PortList = defineComponent({
 const NodeCard = defineComponent({
   name: "NodeCard",
   props: {node: {type: Object, required: true}},
-  emits: ["add-node", "preview", "move-preview", "hide-preview"],
+  emits: ["preview", "move-preview", "hide-preview"],
   template: `
-    <article class="node-card" @mouseenter="$emit('preview', node, $event)" @mousemove="$emit('move-preview', $event)" @mouseleave="$emit('hide-preview')">
+    <article
+      class="node-card"
+      draggable="true"
+      :data-node-type="node.type"
+      @dragstart="handleNodeCardDragStart"
+      @mouseenter="$emit('preview', node, $event)"
+      @mousemove="$emit('move-preview', $event)"
+      @mouseleave="$emit('hide-preview')"
+    >
       <span class="node-type">{{ node.className }}</span>
       <h4>{{ node.title }}</h4>
       <p>{{ node.description }}</p>
-      <button type="button" class="add-node-button" @click="$emit('add-node', node.type)">Add node</button>
     </article>
   `,
+  methods: {
+    handleNodeCardDragStart(event) {
+      event.dataTransfer.effectAllowed = "copy";
+      event.dataTransfer.setData("application/x-flainbot-node-type", this.node.type);
+    },
+  },
 });
 
 const CatalogGroup = defineComponent({
@@ -430,7 +445,7 @@ const CatalogGroup = defineComponent({
     item: {type: Object, required: true},
     depth: {type: Number, default: 0},
   },
-  emits: ["add-node", "preview", "move-preview", "hide-preview"],
+  emits: ["preview", "move-preview", "hide-preview"],
   template: `
     <section class="node-group" :data-depth="String(depth)">
       <h4>{{ item.title }}</h4>
@@ -439,7 +454,6 @@ const CatalogGroup = defineComponent({
           v-if="child.kind === 'group'"
           :item="child"
           :depth="depth + 1"
-          @add-node="$emit('add-node', $event)"
           @preview="(...args) => $emit('preview', ...args)"
           @move-preview="$emit('move-preview', $event)"
           @hide-preview="$emit('hide-preview')"
@@ -447,7 +461,6 @@ const CatalogGroup = defineComponent({
         <NodeCard
           v-else-if="child.kind === 'node'"
           :node="child"
-          @add-node="$emit('add-node', $event)"
           @preview="(...args) => $emit('preview', ...args)"
           @move-preview="$emit('move-preview', $event)"
           @hide-preview="$emit('hide-preview')"
@@ -573,13 +586,15 @@ export default defineComponent({
       return `${edge.from_node}:${edge.from_port}->${edge.to_node}:${edge.to_port}:${index}`;
     }
 
-    function addNode(type) {
+    function addNode(type, position = null) {
       const spec = flatNodeCatalog.value.find((node) => node.type === type);
       if (!spec) {
         setStatus(`Unknown node type: ${type}`, "error");
         return;
       }
       const offset = graph.nodes.length * 28;
+      const x = position ? Math.max(0, position.x) : 48 + offset;
+      const y = position ? Math.max(0, position.y) : 48 + offset;
       const item = {
         id: nextId(spec.type),
         type: spec.type,
@@ -589,11 +604,12 @@ export default defineComponent({
         inputs: spec.inputs,
         outputs: spec.outputs,
         props: cloneDefaults(spec.defaults),
-        x: 48 + offset,
-        y: 48 + offset,
+        x,
+        y,
       };
       graph.nodes.push(item);
       selectedId.value = item.id;
+      nextTick(refreshEdgeLayout);
     }
 
     function removeNode(id) {
@@ -768,6 +784,15 @@ export default defineComponent({
         x: (event.clientX - canvasRect.left - viewportState.x) / viewportState.scale,
         y: (event.clientY - canvasRect.top - viewportState.y) / viewportState.scale,
       };
+    }
+
+    function handleCanvasDrop(event) {
+      const type = event.dataTransfer.getData("application/x-flainbot-node-type");
+      if (!type) {
+        return;
+      }
+      hideNodePreview();
+      addNode(type, canvasPointFromEvent(event));
     }
 
     function startDrag(event, nodeId) {
@@ -1028,6 +1053,7 @@ export default defineComponent({
       graph,
       handleCanvasPointerMove,
       handleCanvasPointerUp,
+      handleCanvasDrop,
       handleChatSubmit,
       handlePersonaSubmit,
       handleProviderSubmit,

@@ -311,6 +311,11 @@ main {
   border-radius: 8px;
   padding: 12px;
   background: #ffffff;
+  cursor: grab;
+}
+
+.node-card:active {
+  cursor: grabbing;
 }
 
 .node-card h4 {
@@ -346,7 +351,6 @@ main {
   pointer-events: none;
 }
 
-.node-card button,
 #save-graph,
 #copy-code {
   background: var(--accent);
@@ -354,18 +358,11 @@ main {
   color: #ffffff;
 }
 
-.node-card button:hover,
 #save-graph:hover,
 #copy-code:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: #ffffff;
-}
-
-.add-node-button {
-  min-height: 26px;
-  padding: 3px 8px;
-  font-size: 12px;
 }
 
 .graph-canvas {
