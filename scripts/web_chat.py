@@ -48,17 +48,27 @@ class GraphConfigStore:
 
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
-    graph = build_graph_from_config(store.load(), message=message, transports=transports)
+    config = store.load()
+    graph = build_graph_from_config(config, message=message, transports=transports)
     executor = GraphExecutor(graph)
     outputs = executor.run()
-    reply_node_id = find_chat_output_node_id(store.load())
-    return {"reply": outputs[reply_node_id]["reply"], "trace": executor.trace}
+    reply_node_ids = find_chat_output_node_ids(config)
+    replies = [outputs[node_id]["reply"] for node_id in reply_node_ids]
+    return {"reply": "\n".join(replies), "replies": replies, "trace": executor.trace}
 
 
 def find_chat_output_node_id(config: dict) -> str:
-    for node in config.get("nodes", []):
-        if node["type"] == "chat_output":
-            return node["id"]
+    return find_chat_output_node_ids(config)[0]
+
+
+def find_chat_output_node_ids(config: dict) -> list[str]:
+    node_ids = [
+        node["id"]
+        for node in config.get("nodes", [])
+        if node["type"] == "chat_output"
+    ]
+    if node_ids:
+        return node_ids
     raise ValueError("graph config must include a chat_output node")
 
 

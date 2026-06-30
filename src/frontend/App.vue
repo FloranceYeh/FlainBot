@@ -677,7 +677,9 @@ export default defineComponent({
       appendMessage("user", message);
       try {
         const payload = await sendChatMessage(message);
-        appendMessage("assistant", payload.reply, payload.trace);
+        for (const reply of payload.replies || [payload.reply]) {
+          appendMessage("assistant", reply, payload.trace);
+        }
       } catch (error) {
         appendMessage("assistant", `Request failed: ${error.message}`);
       }

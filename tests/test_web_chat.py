@@ -86,6 +86,45 @@ class WebChatTests(unittest.TestCase):
             ],
         )
 
+    def test_run_chat_returns_all_chat_output_replies(self):
+        store = web_chat.GraphConfigStore()
+        store.save(
+            {
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "echo_1", "type": "provider_call", "props": {"provider_id": "openai_main"}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                    {"id": "chat_output_2", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "echo_1", "to_port": "text"},
+                    {"from_node": "echo_1", "from_port": "text", "to_node": "chat_output_2", "to_port": "text"},
+                ],
+                "providers": [
+                    {
+                        "id": "openai_main",
+                        "format": "openai_chat",
+                        "base_url": "x",
+                        "api_key": "k",
+                        "model": "m",
+                    }
+                ],
+            }
+        )
+
+        def fake_transport(url, headers, body):
+            return {"choices": [{"message": {"content": f"echo: {body['messages'][0]['content']}"}}]}
+
+        reply = web_chat.run_chat("hello", store, transports={"openai_chat": fake_transport})
+
+        self.assertEqual(reply["replies"], ["hello", "echo: hello"])
+        self.assertEqual(reply["reply"], "hello\necho: hello")
+        self.assertEqual(
+            sorted(item["node_id"] for item in reply["trace"]),
+            ["chat_input_1", "chat_output_1", "chat_output_2", "echo_1"],
+        )
+
     def test_graph_api_saves_and_loads_config(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))

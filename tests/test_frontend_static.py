@@ -294,6 +294,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("hashchange", js)
         self.assertIn("\"/api/chat\"", js)
         self.assertIn("renderTrace", js)
+        self.assertIn("payload.replies || [payload.reply]", js)
         self.assertIn("payload.trace", js)
         self.assertIn("trace-panel", js)
         self.assertIn("127.0.0.1:8765", js)
