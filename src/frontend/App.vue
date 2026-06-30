@@ -361,6 +361,7 @@ import {
   cloneDefaults,
   connectionArrow,
   connectionPath,
+  edgeToReplaceForPort,
   filterNodeCatalog,
   filterOptions,
   flattenNodeCatalog,
@@ -602,14 +603,6 @@ export default defineComponent({
     function removeEdgeAt(index) {
       graph.edges = graph.edges.filter((edge, edgeIndex) => edgeIndex !== index);
       refreshEdgeLayout();
-    }
-
-    function connectedEdgeForPort(nodeId, port, direction) {
-      return graph.edges.findIndex((edge) => (
-        direction === "output"
-          ? edge.from_node === nodeId && edge.from_port === port
-          : edge.to_node === nodeId && edge.to_port === port
-      ));
     }
 
     function updateProperty(id, key, value) {
@@ -860,7 +853,7 @@ export default defineComponent({
       const port = event.currentTarget;
       event.preventDefault();
       event.stopPropagation();
-      const edgeIndex = connectedEdgeForPort(port.dataset.nodeId, port.dataset.port, port.dataset.direction);
+      const edgeIndex = edgeToReplaceForPort(graph.edges, port.dataset.nodeId, port.dataset.port, port.dataset.direction);
       if (edgeIndex !== -1) {
         removeEdgeAt(edgeIndex);
       }
@@ -912,6 +905,10 @@ export default defineComponent({
         const from = connectionDrag.value.direction === "output" ? connectionDrag.value : target.dataset;
         const to = connectionDrag.value.direction === "output" ? target.dataset : connectionDrag.value;
         if (from.nodeId && from.port && to.nodeId && to.port && from.nodeId !== to.nodeId) {
+          const edgeIndex = edgeToReplaceForPort(graph.edges, to.nodeId, to.port, "input");
+          if (edgeIndex !== -1) {
+            removeEdgeAt(edgeIndex);
+          }
           graph.edges.push({from_node: from.nodeId, from_port: from.port, to_node: to.nodeId, to_port: to.port});
           nextTick(refreshEdgeLayout);
         }

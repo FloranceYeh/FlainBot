@@ -31,6 +31,32 @@ class GraphTests(unittest.TestCase):
         self.assertEqual(outputs["source"]["text"], "hello")
         self.assertEqual(outputs["upper"]["text"], "HELLO")
 
+    def test_graph_routes_one_output_to_multiple_inputs(self):
+        class Source:
+            name = "source"
+
+            def run(self, inputs):
+                return {"text": "hello"}
+
+        class Suffix:
+            def __init__(self, suffix):
+                self.suffix = suffix
+
+            def run(self, inputs):
+                return {"text": f"{inputs['text']}{self.suffix}"}
+
+        graph = Graph()
+        graph.add_node("source", Source())
+        graph.add_node("first", Suffix(" one"))
+        graph.add_node("second", Suffix(" two"))
+        graph.connect("source", "text", "first", "text")
+        graph.connect("source", "text", "second", "text")
+
+        outputs = GraphExecutor(graph).run()
+
+        self.assertEqual(outputs["first"]["text"], "hello one")
+        self.assertEqual(outputs["second"]["text"], "hello two")
+
     def test_graph_executes_dependencies_before_dependents(self):
         calls = []
 

@@ -148,6 +148,13 @@ export function portEdgeAnchor(portRect, canvasRect, viewportState, direction) {
   };
 }
 
+export function edgeToReplaceForPort(edges, nodeId, port, direction) {
+  if (direction !== "input") {
+    return -1;
+  }
+  return edges.findIndex((edge) => edge.to_node === nodeId && edge.to_port === port);
+}
+
 function cubicPoint(start, controlA, controlB, end, t) {
   const mt = 1 - t;
   return {

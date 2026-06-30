@@ -122,7 +122,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("pointerdown", js)
         self.assertIn("connectionDrag", js)
         self.assertIn("startConnectionDrag", js)
-        self.assertIn("connectedEdgeForPort", js)
+        self.assertIn("edgeToReplaceForPort", js)
         self.assertIn("removeEdgeAt", js)
         self.assertNotIn("startEdgeEndpointDrag", js)
         self.assertIn("moveConnectionDrag", js)

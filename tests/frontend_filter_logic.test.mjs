@@ -1,6 +1,7 @@
 import {
   connectionArrow,
   connectionPath,
+  edgeToReplaceForPort,
   filterNodeCatalog,
   filterOptions,
   flattenNodeCatalog,
@@ -146,4 +147,15 @@ const inputEdgeAnchor = portEdgeAnchor(
 );
 if (outputEdgeAnchor.x !== 95 || inputEdgeAnchor.x !== 45 || outputEdgeAnchor.y !== 35 || inputEdgeAnchor.y !== 35) {
   throw new Error("port anchors should use the outer edge of the port instead of the button center");
+}
+
+const existingEdges = [
+  {from_node: "source", from_port: "text", to_node: "first", to_port: "text"},
+  {from_node: "source", from_port: "text", to_node: "second", to_port: "text"},
+];
+if (edgeToReplaceForPort(existingEdges, "source", "text", "output") !== -1) {
+  throw new Error("output ports should support fan-out instead of replacing existing edges");
+}
+if (edgeToReplaceForPort(existingEdges, "first", "text", "input") !== 0) {
+  throw new Error("input ports should replace their existing single incoming edge");
 }
