@@ -48,7 +48,7 @@ button:hover {
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -104,8 +104,13 @@ button:hover {
   display: grid;
   grid-template-columns: 280px minmax(520px, 1fr) minmax(44px, 320px);
   gap: 12px;
-  min-height: calc(100vh - 72px);
+  height: calc(100vh - 72px);
+  min-height: 0;
   padding: 12px;
+}
+
+.planner-workbench.result-collapsed {
+  grid-template-columns: 280px minmax(520px, 1fr) 44px;
 }
 
 .node-shelf,
@@ -119,8 +124,15 @@ button:hover {
   padding: 16px;
 }
 
+.node-shelf {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+}
+
 .canvas-panel {
-  min-height: calc(100vh - 96px);
+  min-height: 0;
   padding: 12px;
 }
 
@@ -155,6 +167,8 @@ button:hover {
 
 .node-list {
   display: grid;
+  align-content: start;
+  overflow-y: auto;
 }
 
 .shelf-header {
@@ -265,12 +279,11 @@ button:hover {
   align-self: stretch;
   overflow: auto;
   padding: 0;
-  width: 320px;
-  transition: width 120ms ease;
+  width: auto;
+  min-width: 0;
 }
 
 .result-rail.collapsed {
-  width: 44px;
   overflow: hidden;
 }
 

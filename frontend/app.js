@@ -17,6 +17,7 @@ const graphCountEl = document.getElementById("graph-count");
 const pythonCodeEl = document.getElementById("python-code");
 const resultPanelEl = document.getElementById("result-panel");
 const resultPanelToggleEl = document.getElementById("toggle-result-panel");
+const plannerViewEl = document.getElementById("planner-view");
 const statusMessageEl = document.getElementById("status-message");
 const viewEls = document.querySelectorAll("[data-view]");
 const viewTabEls = document.querySelectorAll("[data-route]");
@@ -488,14 +489,15 @@ function setStatus(message, type = "") {
   statusMessageEl.className = `status-message${type ? ` ${type}` : ""}`;
 }
 
-function renderResultPanel() {
+function renderPlannerLayout() {
   resultPanelEl.className = resultRailCollapsed ? "result-rail collapsed" : "result-rail";
+  plannerViewEl.classList.toggle("result-collapsed", resultRailCollapsed);
   resultPanelToggleEl.setAttribute("aria-expanded", resultRailCollapsed ? "false" : "true");
 }
 
 function toggleResultPanel() {
   resultRailCollapsed = !resultRailCollapsed;
-  renderResultPanel();
+  renderPlannerLayout();
   requestAnimationFrame(renderEdges);
 }
 
@@ -590,7 +592,7 @@ async function init() {
   }
 
   render();
-  renderResultPanel();
+  renderPlannerLayout();
   setActiveView(activeViewFromHash());
 }
 

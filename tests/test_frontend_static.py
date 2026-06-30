@@ -15,6 +15,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("app.js", html)
         self.assertIn("class=\"app-shell\"", html)
         self.assertIn("class=\"workbench-topbar\"", html)
+        self.assertIn("class=\"planner-workbench result-collapsed view\"", html)
         self.assertIn("data-route=\"planner\"", html)
         self.assertIn("data-route=\"chat\"", html)
         self.assertIn("id=\"node-search\"", html)
@@ -72,6 +73,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("updateProperty", js)
         self.assertIn("resultRailCollapsed", js)
         self.assertIn("toggleResultPanel", js)
+        self.assertIn("renderPlannerLayout", js)
+        self.assertIn("result-collapsed", js)
         self.assertIn("result-rail collapsed", js)
         self.assertIn("Could not load node catalog", js)
         self.assertIn("let nodeCatalog = []", js)
@@ -101,6 +104,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("apiUrl(\"/api/chat\")", js)
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn(".chat-shell", css)
+        self.assertIn("grid-template-rows: auto minmax(0, 1fr)", css)
+        self.assertIn("overflow-y: auto", css)
+        self.assertIn(".planner-workbench.result-collapsed", css)
 
     def test_standalone_chat_assets_were_removed(self):
         self.assertFalse((ROOT / "frontend" / "chat.html").exists())
