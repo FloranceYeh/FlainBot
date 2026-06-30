@@ -11,6 +11,9 @@ let resultRailCollapsed = true;
 
 const libraryEl = document.getElementById("node-library");
 const nodeSearchEl = document.getElementById("node-search");
+const packageFilterEl = document.getElementById("package-filter");
+const inputTypeFilterEl = document.getElementById("input-type-filter");
+const outputTypeFilterEl = document.getElementById("output-type-filter");
 const canvasEl = document.getElementById("graph-canvas");
 const canvasSpaceEl = document.getElementById("canvas-space");
 const nodeLayerEl = document.getElementById("node-layer");
@@ -172,6 +175,46 @@ function portsText(ports) {
   return ports.map((port) => `${portName(port)} ${portType(port)}`).join(" ");
 }
 
+function filterOptions(nodes, portDirection) {
+  if (portDirection === "package") {
+    return [...new Set(nodes.map((node) => node.packageId || node.package).filter(Boolean))].sort();
+  }
+  return [...new Set(nodes.flatMap((node) => (
+    (portDirection === "input" ? node.inputs : node.outputs).map(portType)
+  )))].sort();
+}
+
+function renderFilterOptions(selectEl, values, defaultLabel) {
+  const current = selectEl.value;
+  selectEl.innerHTML = `<option value="">${defaultLabel}</option>`;
+  values.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    selectEl.appendChild(option);
+  });
+  selectEl.value = values.includes(current) ? current : "";
+}
+
+function renderNodeFilters() {
+  renderFilterOptions(packageFilterEl, filterOptions(flatNodeCatalog, "package"), "All packages");
+  renderFilterOptions(inputTypeFilterEl, filterOptions(flatNodeCatalog, "input"), "All input types");
+  renderFilterOptions(outputTypeFilterEl, filterOptions(flatNodeCatalog, "output"), "All output types");
+}
+
+function nodeMatchesFilters(node, filters) {
+  if (filters.selectedPackage && (node.packageId || node.package) !== filters.selectedPackage) {
+    return false;
+  }
+  if (filters.selectedInputType && !(node.inputs || []).some((port) => portType(port) === filters.selectedInputType)) {
+    return false;
+  }
+  if (filters.selectedOutputType && !(node.outputs || []).some((port) => portType(port) === filters.selectedOutputType)) {
+    return false;
+  }
+  return true;
+}
+
 function catalogText(item) {
   if (item.kind === "node") {
     return [
@@ -189,32 +232,40 @@ function catalogText(item) {
   return `${item.id} ${item.title} ${item.description || ""}`.toLowerCase();
 }
 
-function filterCatalogItems(items, query) {
+function filterCatalogItems(items, query, filters) {
   return items.flatMap((item) => {
     if (item.kind === "node") {
-      return catalogText(item).includes(query) ? [item] : [];
+      return catalogText(item).includes(query) && nodeMatchesFilters(item, filters) ? [item] : [];
     }
     if (item.kind !== "group") {
       return [];
     }
     if (catalogText(item).includes(query)) {
-      return [item];
+      const children = filterCatalogItems(item.items || [], "", filters);
+      return children.length > 0 ? [{...item, items: children}] : [];
     }
-    const children = filterCatalogItems(item.items || [], query);
+    const children = filterCatalogItems(item.items || [], query, filters);
     return children.length > 0 ? [{...item, items: children}] : [];
   });
 }
 
 function filterNodeCatalog() {
   const query = nodeSearchEl.value.trim().toLowerCase();
-  if (!query) {
+  const filters = {
+    selectedPackage: packageFilterEl.value,
+    selectedInputType: inputTypeFilterEl.value,
+    selectedOutputType: outputTypeFilterEl.value,
+  };
+  const hasFilters = filters.selectedPackage || filters.selectedInputType || filters.selectedOutputType;
+  if (!query && !hasFilters) {
     return nodeCatalog;
   }
   return nodeCatalog.flatMap((packageItem) => {
     if (catalogText(packageItem).includes(query)) {
-      return [packageItem];
+      const children = filterCatalogItems(packageItem.items || [], "", filters);
+      return children.length > 0 ? [{...packageItem, items: children}] : [];
     }
-    const children = filterCatalogItems(packageItem.items || [], query);
+    const children = filterCatalogItems(packageItem.items || [], query, filters);
     return children.length > 0 ? [{...packageItem, items: children}] : [];
   });
 }
@@ -750,6 +801,7 @@ async function init() {
   try {
     await loadNodeCatalog();
     await loadProviders();
+    renderNodeFilters();
     renderLibrary();
     renderProviders();
   } catch (error) {
@@ -786,6 +838,9 @@ providerFormEl.addEventListener("submit", async (event) => {
 });
 
 nodeSearchEl.addEventListener("input", renderLibrary);
+packageFilterEl.addEventListener("change", renderLibrary);
+inputTypeFilterEl.addEventListener("change", renderLibrary);
+outputTypeFilterEl.addEventListener("change", renderLibrary);
 resultPanelToggleEl.addEventListener("click", toggleResultPanel);
 
 document.getElementById("copy-code").addEventListener("click", async () => {

@@ -23,6 +23,26 @@
             <div class="shelf-header">
               <h2 id="library-title">Nodes</h2>
               <input id="node-search" type="search" autocomplete="off" placeholder="Search nodes">
+              <div class="node-filters" aria-label="Node filters">
+                <label>
+                  <span>Package</span>
+                  <select id="package-filter">
+                    <option value="">All packages</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Input type</span>
+                  <select id="input-type-filter">
+                    <option value="">All input types</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Output type</span>
+                  <select id="output-type-filter">
+                    <option value="">All output types</option>
+                  </select>
+                </label>
+              </div>
             </div>
             <div id="node-library" class="node-list"></div>
           </aside>

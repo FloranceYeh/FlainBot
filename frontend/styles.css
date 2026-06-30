@@ -189,12 +189,28 @@ main {
 }
 
 .shelf-header input,
+.node-filters select,
 .field select {
   width: 100%;
   min-height: 34px;
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   padding: 6px 8px;
+}
+
+.node-filters {
+  display: grid;
+  gap: 8px;
+}
+
+.node-filters label {
+  display: grid;
+  gap: 4px;
+}
+
+.node-filters span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .node-package {
