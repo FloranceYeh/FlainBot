@@ -300,6 +300,7 @@ main {
 
 .result-toggle {
   display: grid;
+  gap: 8px;
   place-items: center;
   width: 100%;
   min-height: 44px;
@@ -310,10 +311,16 @@ main {
 
 .result-toggle-label {
   display: inline-block;
-  transform: rotate(90deg);
   white-space: nowrap;
   color: var(--muted);
   font-size: 12px;
+  font-weight: 600;
+}
+
+.result-toggle-hint {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .result-rail:not(.collapsed) .result-toggle {
@@ -321,8 +328,15 @@ main {
   padding-left: 12px;
 }
 
-.result-rail:not(.collapsed) .result-toggle-label {
-  transform: none;
+.result-rail.collapsed .result-toggle {
+  height: 100%;
+  border-width: 0;
+  border-radius: 8px;
+  writing-mode: vertical-rl;
+}
+
+.result-rail:not(.collapsed) .result-toggle-hint {
+  display: none;
 }
 
 .result-rail.collapsed .result-section {

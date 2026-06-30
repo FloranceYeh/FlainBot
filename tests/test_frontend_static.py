@@ -21,6 +21,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("id=\"node-search\"", html)
         self.assertIn("id=\"result-panel\"", html)
         self.assertIn("id=\"toggle-result-panel\"", html)
+        self.assertIn("class=\"result-toggle-hint\">Open</span>", html)
         self.assertIn("id=\"python-panel\"", html)
         self.assertIn("<summary>Generated Python</summary>", html)
         self.assertNotIn("open", html.split("id=\"python-panel\"")[1].split(">")[0])
@@ -111,6 +112,10 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("grid-template-rows: auto minmax(0, 1fr)", css)
         self.assertIn("overflow-y: auto", css)
         self.assertIn(".planner-workbench.result-collapsed", css)
+        self.assertIn(".result-rail.collapsed .result-toggle", css)
+        self.assertIn("height: 100%", css)
+        self.assertIn("writing-mode: vertical-rl", css)
+        self.assertIn(".result-toggle-hint", css)
         self.assertIn("height: 100%", css)
 
     def test_standalone_chat_assets_were_removed(self):
