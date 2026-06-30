@@ -24,336 +24,91 @@
         data-view="planner"
         v-show="activeView === 'planner'"
       >
-        <aside class="node-shelf" aria-labelledby="library-title">
-          <div class="shelf-header">
-            <h2 id="library-title">Nodes</h2>
-            <input id="node-search" v-model="nodeSearch" type="search" autocomplete="off" placeholder="Search nodes">
-            <div class="node-filters" aria-label="Node filters">
-              <details id="node-filter-dropdown" class="filter-dropdown">
-                <summary id="node-filter-summary">{{ nodeFilterSummary }}</summary>
-                <section class="filter-section" data-filter-label="Package">
-                  <h3 id="package-filter-summary">Package</h3>
-                  <div id="package-filter-options" class="filter-options">
-                    <label v-for="value in filterOptionValues.package" :key="value" class="filter-option">
-                      <input v-model="selectedPackage" type="checkbox" :value="value">
-                      <span>{{ value }}</span>
-                    </label>
-                  </div>
-                </section>
-                <section class="filter-section" data-filter-label="Input type">
-                  <h3 id="input-type-filter-summary">Input type</h3>
-                  <div id="input-type-filter-options" class="filter-options">
-                    <label v-for="value in filterOptionValues.input" :key="value" class="filter-option">
-                      <input v-model="selectedInputType" type="checkbox" :value="value">
-                      <span>{{ value }}</span>
-                    </label>
-                  </div>
-                </section>
-                <section class="filter-section" data-filter-label="Output type">
-                  <h3 id="output-type-filter-summary">Output type</h3>
-                  <div id="output-type-filter-options" class="filter-options">
-                    <label v-for="value in filterOptionValues.output" :key="value" class="filter-option">
-                      <input v-model="selectedOutputType" type="checkbox" :value="value">
-                      <span>{{ value }}</span>
-                    </label>
-                  </div>
-                </section>
-              </details>
-            </div>
-          </div>
-          <div id="node-library" class="node-list">
-            <section v-for="packageItem in filteredCatalog" :key="packageItem.id" class="node-package">
-              <h3>{{ packageItem.title }}</h3>
-              <p>{{ packageItem.description }}</p>
-              <template v-for="item in packageItem.items" :key="`${packageItem.id}-${item.id || item.type}`">
-                <CatalogGroup v-if="item.kind === 'group'" :item="item" :depth="0" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
-                <NodeCard v-else-if="item.kind === 'node'" :node="item" @preview="showNodePreview" @move-preview="moveNodePreview" @hide-preview="hideNodePreview" />
-              </template>
-            </section>
-          </div>
-        </aside>
-
-        <section class="canvas-panel" aria-labelledby="graph-title">
-          <div class="canvas-toolbar">
-            <h2 id="graph-title">FlainBot Node Planner</h2>
-            <p id="status-message" class="status-message" :class="statusType" role="status" aria-live="polite">{{ statusMessage }}</p>
-            <span id="graph-count" class="count">{{ graph.nodes.length }} nodes / {{ graph.edges.length }} edges</span>
-            <div class="canvas-actions">
-              <button id="save-graph" type="button" @click="handleSaveGraph">Save</button>
-              <button id="reset-graph" type="button" @click="resetGraph">Reset</button>
-            </div>
-          </div>
-          <div
-            id="graph-canvas"
-            ref="canvasEl"
-            class="graph-canvas"
-            @pointermove="handleCanvasPointerMove"
-            @pointerup="handleCanvasPointerUp"
-            @pointercancel="handleCanvasPointerUp"
-            @wheel.prevent="zoomCanvas"
-            @pointerdown="startCanvasPan"
-            @dragover.prevent
-            @drop.prevent="handleCanvasDrop"
-          >
-            <div id="canvas-space" class="canvas-space" data-canvas-space :style="canvasSpaceStyle">
-              <svg id="edge-layer" class="edge-layer">
-                <path
-                  v-for="edge in renderedEdges"
-                  :key="edge.key"
-                  :d="edge.d"
-                ></path>
-                <polygon
-                  v-for="edge in renderedEdges"
-                  :key="`${edge.key}:arrow`"
-                  class="edge-arrow"
-                  points="-6 -4, 6 0, -6 4"
-                  :transform="`translate(${edge.arrow.x} ${edge.arrow.y}) rotate(${edge.arrow.angle})`"
-                ></polygon>
-                <path
-                  v-if="previewConnectionPath"
-                  class="preview-connection"
-                  :d="previewConnectionPath"
-                ></path>
-              </svg>
-              <div id="node-layer" class="node-layer">
-                <article
-                  v-for="node in graph.nodes"
-                  :key="node.id"
-                  class="graph-node"
-                  :class="{selected: node.id === selectedId}"
-                  :style="{left: `${node.x}px`, top: `${node.y}px`}"
-                  :data-node-id="node.id"
-                  @pointerdown="selectNode(node.id)"
-                >
-                  <button
-                    type="button"
-                    class="node-remove-dot"
-                    title="Remove node"
-                    :aria-label="`Remove ${node.id}`"
-                    @pointerdown.stop
-                    @click.stop="removeNode(node.id)"
-                  ></button>
-                  <div class="node-header" data-drag-handle="true" @pointerdown.stop="startDrag($event, node.id)">
-                    <span class="node-type">{{ node.id }} / {{ node.className }}</span>
-                    <h3>{{ node.title }}</h3>
-                  </div>
-                  <div class="node-body">
-                    <div class="ports">
-                      <div class="port-column">
-                        <span class="port-title">Inputs</span>
-                        <PortList :node="node" direction="input" :connection-drag="connectionDrag" @start-connection="startConnectionDrag" />
-                      </div>
-                      <div class="port-column">
-                        <span class="port-title">Outputs</span>
-                        <PortList :node="node" direction="output" :connection-drag="connectionDrag" @start-connection="startConnectionDrag" />
-                      </div>
-                    </div>
-                    <form v-if="Object.keys(node.props).length > 0 || node.type === 'provider_call' || node.type === 'persona'" class="node-properties" autocomplete="off" @submit.prevent>
-                      <div v-if="node.type === 'provider_call'" class="field">
-                        <label>provider_id</label>
-                        <select :value="node.props.provider_id" data-prop-key="provider_id" @input="updateProperty(node.id, 'provider_id', $event.target.value)">
-                          <option value="">Select provider</option>
-                          <option v-for="provider in providers" :key="provider.id" :value="provider.id">{{ provider.id }} / {{ provider.format }}</option>
-                        </select>
-                      </div>
-                      <div v-else-if="node.type === 'persona'" class="field">
-                        <label>persona_id</label>
-                        <select :value="node.props.persona_id" data-prop-key="persona_id" @input="updateProperty(node.id, 'persona_id', $event.target.value)">
-                          <option value="">Select persona</option>
-                          <option v-for="persona in personas" :key="persona.persona_id" :value="persona.persona_id">{{ persona.persona_id }}</option>
-                        </select>
-                      </div>
-                      <template v-else>
-                        <div v-for="(value, key) in node.props" :key="key" class="field">
-                          <label>{{ key }}</label>
-                          <input :value="value" :data-prop-key="key" @input="updateProperty(node.id, key, $event.target.value)">
-                        </div>
-                      </template>
-                    </form>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <aside id="result-panel" class="result-rail collapsed" :class="{collapsed: resultRailCollapsed}" aria-label="Results">
-          <button id="toggle-result-panel" class="result-toggle" type="button" :aria-expanded="resultRailCollapsed ? 'false' : 'true'" title="Toggle generated output" @click="toggleResultPanel">
-            <span class="result-toggle-label">Generated Python</span>
-          </button>
-          <div id="python-panel" class="result-section">
-            <div class="result-actions">
-              <button id="copy-code" type="button" @click="copyCode">Copy</button>
-            </div>
-            <pre><code id="python-code">{{ generatedPython }}</code></pre>
-          </div>
-        </aside>
+        <NodeShelf
+          :filtered-catalog="filteredCatalog"
+          :filter-option-values="filterOptionValues"
+          :node-filter-summary="nodeFilterSummary"
+          v-model:node-search="nodeSearch"
+          v-model:selected-input-type="selectedInputType"
+          v-model:selected-output-type="selectedOutputType"
+          v-model:selected-package="selectedPackage"
+          @preview="showNodePreview"
+          @move-preview="moveNodePreview"
+          @hide-preview="hideNodePreview"
+        />
+        <GraphCanvas
+          :canvas-space-style="canvasSpaceStyle"
+          :connection-drag="connectionDrag"
+          :graph="graph"
+          :personas="personas"
+          :preview-connection-path="previewConnectionPath"
+          :providers="providers"
+          :rendered-edges="renderedEdges"
+          :selected-id="selectedId"
+          :status-message="statusMessage"
+          :status-type="statusType"
+          @canvas-drop="handleCanvasDrop"
+          @canvas-pan="startCanvasPan"
+          @canvas-pointer-move="handleCanvasPointerMove"
+          @canvas-pointer-up="handleCanvasPointerUp"
+          @canvas-ref="canvasEl = $event"
+          @remove-node="removeNode"
+          @reset-graph="resetGraph"
+          @save-graph="handleSaveGraph"
+          @select-node="selectNode"
+          @start-connection="startConnectionDrag"
+          @start-drag="startDrag"
+          @update-property="updateProperty"
+          @zoom-canvas="zoomCanvas"
+        />
+        <ResultRail
+          :collapsed="resultRailCollapsed"
+          :generated-python="generatedPython"
+          @copy="copyCode"
+          @toggle="toggleResultPanel"
+        />
       </section>
 
-      <section id="providers-view" class="view providers-shell" data-view="providers" v-show="activeView === 'providers'">
-        <section class="panel provider-editor" aria-labelledby="providers-title">
-          <div class="section-header">
-            <h2 id="providers-title">Providers</h2>
-            <span class="count">Create reusable provider configs for Call Provider nodes.</span>
-          </div>
-          <form id="provider-form" class="provider-form" autocomplete="off" @submit.prevent="handleProviderSubmit">
-            <div class="field">
-              <label>ID</label>
-              <input v-model="providerForm.id" name="id" placeholder="provider-id" required>
-            </div>
-            <div class="field">
-              <label>Format</label>
-              <select v-model="providerForm.format" name="format">
-                <option value="openai_chat">OpenAI Chat</option>
-                <option value="anthropic_messages">Anthropic Messages</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Base URL</label>
-              <input v-model="providerForm.base_url" name="base_url" placeholder="provider-base-url" required>
-            </div>
-            <div class="field">
-              <label>API Key</label>
-              <input v-model="providerForm.api_key" name="api_key">
-            </div>
-            <div class="field">
-              <label>Model</label>
-              <input v-model="providerForm.model" name="model" placeholder="your-model-name" required>
-            </div>
-            <button type="submit">Save Provider</button>
-          </form>
-        </section>
-        <section class="panel provider-list-panel" aria-labelledby="provider-list-title">
-          <div class="section-header">
-            <h2 id="provider-list-title">Configured Providers</h2>
-          </div>
-          <div id="provider-list" class="provider-list">
-            <p v-if="providers.length === 0" class="empty-state">No providers configured.</p>
-            <article v-for="provider in providers" :key="provider.id" class="provider-card">
-              <div>
-                <span class="node-type">{{ provider.format }}</span>
-                <h3>{{ provider.id }}</h3>
-                <p>{{ provider.base_url }} / {{ provider.model }}</p>
-              </div>
-              <button type="button" class="danger" :data-remove-provider="provider.id" @click="removeProvider(provider.id)">Remove</button>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <section id="personas-view" class="view personas-shell" data-view="personas" v-show="activeView === 'personas'">
-        <section class="panel persona-editor" aria-labelledby="personas-title">
-          <div class="section-header">
-            <h2 id="personas-title">Personas</h2>
-            <span class="count">Create reusable prompt profiles for Apply Persona nodes.</span>
-          </div>
-          <form id="persona-form" class="persona-form" autocomplete="off" @submit.prevent="handlePersonaSubmit">
-            <div class="field">
-              <label>ID</label>
-              <input v-model="personaForm.persona_id" name="persona_id" placeholder="persona-id" required>
-            </div>
-            <div class="field">
-              <label>System Prompt</label>
-              <textarea v-model="personaForm.system_prompt" name="system_prompt" placeholder="system-prompt" required></textarea>
-            </div>
-            <div class="field">
-              <label>Begin Dialogs</label>
-              <textarea v-model="personaForm.begin_dialogs" name="begin_dialogs" placeholder="user and assistant lines"></textarea>
-            </div>
-            <div class="field">
-              <label>Tools JSON</label>
-              <textarea v-model="personaForm.tools_json" name="tools_json" placeholder="[]"></textarea>
-            </div>
-            <div class="field">
-              <label>Skills JSON</label>
-              <textarea v-model="personaForm.skills_json" name="skills_json" placeholder="[]"></textarea>
-            </div>
-            <div class="field">
-              <label>Custom Error Message</label>
-              <input v-model="personaForm.custom_error_message" name="custom_error_message" placeholder="fallback-message">
-            </div>
-            <button type="submit">Save Persona</button>
-          </form>
-        </section>
-        <section class="panel persona-list-panel" aria-labelledby="persona-list-title">
-          <div class="section-header">
-            <h2 id="persona-list-title">Configured Personas</h2>
-          </div>
-          <div id="persona-list" class="persona-list">
-            <p v-if="personas.length === 0" class="empty-state">No personas configured.</p>
-            <article v-for="persona in personas" :key="persona.persona_id" class="persona-card">
-              <div>
-                <span class="node-type">{{ persona.begin_dialogs.length }} begin dialogs</span>
-                <h3>{{ persona.persona_id }}</h3>
-                <p>{{ persona.system_prompt }}</p>
-              </div>
-              <button type="button" class="danger" :data-remove-persona="persona.persona_id" @click="removePersona(persona.persona_id)">Remove</button>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <section id="chat-view" class="view chat-shell" data-view="chat" v-show="activeView === 'chat'">
-        <header class="chat-header">
-          <h2>FlainBot Chat</h2>
-          <p>Graph runtime: input node to model node to output node.</p>
-        </header>
-        <section id="messages" ref="messagesEl" class="messages" aria-live="polite">
-          <div v-for="(message, index) in messages" :key="index" class="message" :class="message.role">
-            <template v-if="message.trace.length > 0">
-              <p>{{ message.text }}</p>
-              <details class="trace-panel">
-                <summary>Runtime trace ({{ message.trace.length }})</summary>
-                <pre><code>{{ JSON.stringify(message.trace, null, 2) }}</code></pre>
-              </details>
-            </template>
-            <template v-else>{{ message.text }}</template>
-          </div>
-        </section>
-        <form id="chat-form" class="composer" @submit.prevent="handleChatSubmit">
-          <input v-model="messageInput" id="message-input" name="message" autocomplete="off" placeholder="Type a message">
-          <button type="submit">Send</button>
-        </form>
-      </section>
+      <ProvidersView
+        :active="activeView === 'providers'"
+        :provider-form="providerForm"
+        :providers="providers"
+        @remove="removeProvider"
+        @submit="handleProviderSubmit"
+      />
+      <PersonasView
+        :active="activeView === 'personas'"
+        :persona-form="personaForm"
+        :personas="personas"
+        @remove="removePersona"
+        @submit="handlePersonaSubmit"
+      />
+      <ChatView
+        :active="activeView === 'chat'"
+        :messages="messages"
+        v-model:message-input="messageInput"
+        @messages-ref="messagesEl = $event"
+        @submit="handleChatSubmit"
+      />
     </main>
   </div>
 
-  <div
-    id="node-preview-popover"
-    class="node-preview"
-    :style="nodePreviewStyle"
-    :hidden="!nodePreview.visible"
-  >
-    <article v-if="nodePreview.node" class="graph-node preview-node">
-      <div class="node-header">
-        <span class="node-type">preview / {{ nodePreview.node.className }}</span>
-        <h3>{{ nodePreview.node.title }}</h3>
-      </div>
-      <div class="node-body">
-        <p>{{ nodePreview.node.description }}</p>
-        <div class="ports">
-          <div class="port-column">
-            <span class="port-title">Inputs</span>
-            <PortList :node="previewNode" direction="input" :connection-drag="null" />
-          </div>
-          <div class="port-column">
-            <span class="port-title">Outputs</span>
-            <PortList :node="previewNode" direction="output" :connection-drag="null" />
-          </div>
-        </div>
-        <form v-if="previewNode && Object.keys(previewNode.props).length > 0" class="node-properties" autocomplete="off" @submit.prevent>
-          <div v-for="(value, key) in previewNode.props" :key="key" class="field">
-            <label>{{ key }}</label>
-            <input :value="value" readonly>
-          </div>
-        </form>
-      </div>
-    </article>
-  </div>
+  <NodePreview
+    :node-preview="nodePreview"
+    :node-preview-style="nodePreviewStyle"
+    :preview-node="previewNode"
+  />
 </template>
 
 <script>
 import {computed, defineComponent, nextTick, onMounted, reactive, ref} from "vue";
+import GraphCanvas from "./components/GraphCanvas.vue";
+import NodePreview from "./components/NodePreview.vue";
+import NodeShelf from "./components/NodeShelf.vue";
+import ResultRail from "./components/ResultRail.vue";
+import ProvidersView from "./views/ProvidersView.vue";
+import PersonasView from "./views/PersonasView.vue";
+import ChatView from "./views/ChatView.vue";
 import {
   loadNodeCatalog,
   loadPersonas,
@@ -375,105 +130,11 @@ import {
   generatePython,
   parseJsonOrEmpty,
   portEdgeAnchor,
-  portName,
-  portType,
 } from "./graph.js";
-
-const PortList = defineComponent({
-  name: "PortList",
-  props: {
-    node: {type: Object, required: true},
-    direction: {type: String, required: true},
-    connectionDrag: {type: Object, default: null},
-  },
-  emits: ["start-connection"],
-  methods: {portName, portType},
-  computed: {
-    ports() {
-      return this.direction === "input" ? this.node.inputs : this.node.outputs;
-    },
-  },
-  template: `
-    <span v-if="ports.length === 0" class="node-type">none</span>
-    <button
-      v-for="port in ports"
-      v-else
-      :key="portName(port)"
-      type="button"
-      class="port"
-      :class="[direction, {compatible: connectionDrag && node.id !== connectionDrag.nodeId && direction !== connectionDrag.direction}]"
-      :data-node-id="node.id"
-      :data-port="portName(port)"
-      :data-port-type="portType(port)"
-      :data-direction="direction"
-      :data-compatible="connectionDrag && node.id !== connectionDrag.nodeId && direction !== connectionDrag.direction ? 'true' : 'false'"
-      @pointerdown.stop="$emit('start-connection', $event)"
-    ><span>{{ portName(port) }}</span><span class="port-type">{{ portType(port) }}</span></button>
-  `,
-});
-
-const NodeCard = defineComponent({
-  name: "NodeCard",
-  props: {node: {type: Object, required: true}},
-  emits: ["preview", "move-preview", "hide-preview"],
-  template: `
-    <article
-      class="node-card"
-      draggable="true"
-      :data-node-type="node.type"
-      @dragstart="handleNodeCardDragStart"
-      @mouseenter="$emit('preview', node, $event)"
-      @mousemove="$emit('move-preview', $event)"
-      @mouseleave="$emit('hide-preview')"
-    >
-      <span class="node-type">{{ node.className }}</span>
-      <h4>{{ node.title }}</h4>
-      <p>{{ node.description }}</p>
-    </article>
-  `,
-  methods: {
-    handleNodeCardDragStart(event) {
-      event.dataTransfer.effectAllowed = "copy";
-      event.dataTransfer.setData("application/x-flainbot-node-type", this.node.type);
-    },
-  },
-});
-
-const CatalogGroup = defineComponent({
-  name: "CatalogGroup",
-  props: {
-    item: {type: Object, required: true},
-    depth: {type: Number, default: 0},
-  },
-  emits: ["preview", "move-preview", "hide-preview"],
-  template: `
-    <section class="node-group" :data-depth="String(depth)">
-      <h4>{{ item.title }}</h4>
-      <template v-for="child in item.items" :key="child.id || child.type">
-        <CatalogGroup
-          v-if="child.kind === 'group'"
-          :item="child"
-          :depth="depth + 1"
-          @preview="(...args) => $emit('preview', ...args)"
-          @move-preview="$emit('move-preview', $event)"
-          @hide-preview="$emit('hide-preview')"
-        />
-        <NodeCard
-          v-else-if="child.kind === 'node'"
-          :node="child"
-          @preview="(...args) => $emit('preview', ...args)"
-          @move-preview="$emit('move-preview', $event)"
-          @hide-preview="$emit('hide-preview')"
-        />
-      </template>
-    </section>
-  `,
-});
-CatalogGroup.components = {NodeCard, CatalogGroup};
 
 export default defineComponent({
   name: "App",
-  components: {CatalogGroup, NodeCard, PortList},
+  components: {ChatView, GraphCanvas, NodePreview, NodeShelf, PersonasView, ProvidersView, ResultRail},
   setup() {
     const nodeCatalog = ref([]);
     const flatNodeCatalog = ref([]);

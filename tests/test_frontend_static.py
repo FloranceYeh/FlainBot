@@ -6,6 +6,14 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_frontend_sources(*suffixes):
+    parts = []
+    for path in sorted((ROOT / "src" / "frontend").rglob("*")):
+        if path.is_file() and path.suffix in suffixes:
+            parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
 class FrontendStaticTests(unittest.TestCase):
     def test_vue_app_project_files_exist(self):
         package_json = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
@@ -19,6 +27,12 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "App.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "api.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "graph.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "components" / "NodeShelf.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "components" / "GraphCanvas.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "components" / "ResultRail.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "views" / "ProvidersView.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "views" / "PersonasView.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "views" / "ChatView.vue").exists())
         vite_config = (ROOT / "vite.config.js").read_text(encoding="utf-8")
         self.assertIn("@vitejs/plugin-vue", vite_config)
         self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
@@ -27,10 +41,13 @@ class FrontendStaticTests(unittest.TestCase):
     def test_planner_page_references_assets_and_nodes(self):
         html = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
         js = (
-            (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+            read_frontend_sources(".vue", ".js")
             + (ROOT / "src" / "frontend" / "graph.js").read_text(encoding="utf-8")
             + (ROOT / "src" / "frontend" / "api.js").read_text(encoding="utf-8")
         )
+        app_source = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+        component_html = read_frontend_sources(".vue")
+        html = component_html
 
         self.assertIn("FlainBot Node Planner", html)
         self.assertIn("class=\"app-shell\"", html)
@@ -100,7 +117,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("edge-layer", html)
         self.assertNotIn("<marker", html)
         self.assertNotIn("property-editor", html)
-        node_layer_html = html.split("<div id=\"node-layer\"", 1)[1].split("</div>\n            </div>", 1)[0]
+        graph_canvas_html = (ROOT / "src" / "frontend" / "components" / "GraphCanvas.vue").read_text(encoding="utf-8")
+        node_layer_html = graph_canvas_html.split("<div id=\"node-layer\"", 1)[1].split("</div>\n      </div>", 1)[0]
         self.assertIn("node-remove-dot", node_layer_html)
         self.assertNotIn("node-remove-triangle", node_layer_html)
         self.assertIn("title=\"Remove node\"", node_layer_html)
@@ -181,7 +199,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("dataTransfer.setData", js)
         self.assertIn("dataTransfer.getData", js)
         self.assertIn("@dragover.prevent", html)
-        self.assertIn("@drop.prevent=\"handleCanvasDrop\"", html)
+        self.assertIn("@drop.prevent=\"$emit('canvas-drop', $event)\"", html)
+        self.assertIn("@canvas-drop=\"handleCanvasDrop\"", app_source)
         self.assertIn("mousemove", js)
         self.assertIn("mouseleave", js)
         self.assertNotIn("add-node-button", js)
@@ -190,9 +209,17 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("packageTitle", js)
         self.assertIn("data-port-type", js)
         self.assertIn("CatalogGroup", js)
-        self.assertIn("CatalogGroup.components = {NodeCard, CatalogGroup}", js)
         self.assertIn("node-package", js)
         self.assertIn("node-group", js)
+        self.assertIn("import NodeShelf from \"./components/NodeShelf.vue\"", app_source)
+        self.assertIn("import GraphCanvas from \"./components/GraphCanvas.vue\"", app_source)
+        self.assertIn("import ResultRail from \"./components/ResultRail.vue\"", app_source)
+        self.assertIn("import ProvidersView from \"./views/ProvidersView.vue\"", app_source)
+        self.assertIn("import PersonasView from \"./views/PersonasView.vue\"", app_source)
+        self.assertIn("import ChatView from \"./views/ChatView.vue\"", app_source)
+        self.assertNotIn("const PortList = defineComponent", app_source)
+        self.assertNotIn("const NodeCard = defineComponent", app_source)
+        self.assertNotIn("const CatalogGroup = defineComponent", app_source)
         self.assertNotIn("categoryForNode", js)
         self.assertIn("node-search", js)
         self.assertIn("generatedPython", js)
@@ -250,9 +277,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertNotIn(".add-node-button", css)
 
     def test_chat_view_is_in_single_index_shell(self):
-        html = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+        html = read_frontend_sources(".vue")
         js = (
-            (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+            read_frontend_sources(".vue", ".js")
             + (ROOT / "src" / "frontend" / "api.js").read_text(encoding="utf-8")
         )
         css = (ROOT / "src" / "frontend" / "styles.css").read_text(encoding="utf-8")
