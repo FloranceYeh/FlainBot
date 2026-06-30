@@ -326,6 +326,10 @@ main {
 .node-preview {
   position: fixed;
   z-index: 40;
+  width: min(270px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   pointer-events: none;
 }
 
@@ -333,11 +337,10 @@ main {
   display: none;
 }
 
-.preview-node {
+.node-preview .preview-node {
   position: static;
-  width: 270px;
-  max-height: min(560px, calc(100vh - 24px));
-  overflow: auto;
+  width: 100%;
+  max-width: 100%;
   box-shadow: 0 12px 28px rgba(24, 32, 45, 0.18);
   pointer-events: none;
 }
