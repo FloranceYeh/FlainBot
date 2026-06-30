@@ -18,13 +18,19 @@ FRONTEND = ROOT / "frontend"
 
 class GraphConfigStore:
     def __init__(self, initial_config: dict | None = None) -> None:
-        self._config = initial_config or {"nodes": [], "edges": []}
+        self._config = initial_config or {"nodes": [], "edges": [], "providers": []}
 
     def save(self, config: dict) -> None:
         self._config = config
 
     def load(self) -> dict:
         return self._config
+
+    def save_providers(self, providers: list[dict]) -> None:
+        self._config = {**self._config, "providers": providers}
+
+    def load_providers(self) -> list[dict]:
+        return self._config.get("providers", [])
 
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
@@ -46,6 +52,9 @@ def make_handler(store: GraphConfigStore):
         def do_GET(self) -> None:
             if self.path == "/api/graph":
                 self.send_json(store.load())
+                return
+            if self.path == "/api/providers":
+                self.send_json(store.load_providers())
                 return
             if self.path == "/api/nodes":
                 self.send_json(builtin_node_catalog())
@@ -74,6 +83,12 @@ def make_handler(store: GraphConfigStore):
                 self.send_json({"status": "ok"})
                 return
 
+            if self.path == "/api/providers":
+                payload = self.read_json()
+                store.save_providers(payload)
+                self.send_json({"status": "ok"})
+                return
+
             if self.path != "/api/chat":
                 self.send_error(404)
                 return
@@ -82,7 +97,7 @@ def make_handler(store: GraphConfigStore):
             self.send_json(run_chat(payload["message"], store))
 
         def do_OPTIONS(self) -> None:
-            if self.path not in {"/api/graph", "/api/chat", "/api/nodes"}:
+            if self.path not in {"/api/graph", "/api/chat", "/api/nodes", "/api/providers"}:
                 self.send_error(404)
                 return
 

@@ -98,6 +98,48 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_provider_api_saves_and_loads_configs(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        providers = [
+            {
+                "id": "openai_main",
+                "format": "openai_chat",
+                "base_url": "https://api.openai.test/v1",
+                "api_key": "key",
+                "model": "gpt-test",
+            },
+            {
+                "id": "anthropic_main",
+                "format": "anthropic_messages",
+                "base_url": "https://api.anthropic.test/v1",
+                "api_key": "key",
+                "model": "claude-test",
+            },
+        ]
+
+        try:
+            body = json.dumps(providers).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/providers",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/providers", timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), providers)
+
+            self.assertEqual(store.load().get("providers"), providers)
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_nodes_api_returns_builtin_node_catalog(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
@@ -141,7 +183,7 @@ class WebChatTests(unittest.TestCase):
 
         try:
             req = request.Request(
-                f"{base_url}/api/graph",
+                f"{base_url}/api/providers",
                 headers={
                     "Origin": "http://127.0.0.1:5500",
                     "Access-Control-Request-Method": "POST",
@@ -204,7 +246,7 @@ class WebChatTests(unittest.TestCase):
         handler = captured["handler"]
         self.assertEqual(result, 0)
         self.assertEqual(captured["address"], ("127.0.0.1", 8765))
-        self.assertEqual(handler.store.load(), {"nodes": [], "edges": []})
+        self.assertEqual(handler.store.load(), {"nodes": [], "edges": [], "providers": []})
         self.assertIn("http://127.0.0.1:8765/", stdout.getvalue())
 
 
