@@ -417,7 +417,6 @@ const NodeCard = defineComponent({
 
 const CatalogGroup = defineComponent({
   name: "CatalogGroup",
-  components: {NodeCard},
   props: {
     item: {type: Object, required: true},
     depth: {type: Number, default: 0},
@@ -448,6 +447,7 @@ const CatalogGroup = defineComponent({
     </section>
   `,
 });
+CatalogGroup.components = {NodeCard, CatalogGroup};
 
 export default defineComponent({
   name: "App",

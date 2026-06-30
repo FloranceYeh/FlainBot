@@ -169,6 +169,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("packageTitle", js)
         self.assertIn("data-port-type", js)
         self.assertIn("CatalogGroup", js)
+        self.assertIn("CatalogGroup.components = {NodeCard, CatalogGroup}", js)
         self.assertIn("node-package", js)
         self.assertIn("node-group", js)
         self.assertNotIn("categoryForNode", js)
