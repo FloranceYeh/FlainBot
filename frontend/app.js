@@ -5,6 +5,7 @@ let pendingOutput = null;
 let dragState = null;
 let viewportState = {x: 0, y: 0, scale: 1};
 let canvasPanState = null;
+let resultRailCollapsed = true;
 
 const libraryEl = document.getElementById("node-library");
 const nodeSearchEl = document.getElementById("node-search");
@@ -14,6 +15,8 @@ const nodeLayerEl = document.getElementById("node-layer");
 const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
 const pythonCodeEl = document.getElementById("python-code");
+const resultPanelEl = document.getElementById("result-panel");
+const resultPanelToggleEl = document.getElementById("toggle-result-panel");
 const statusMessageEl = document.getElementById("status-message");
 const viewEls = document.querySelectorAll("[data-view]");
 const viewTabEls = document.querySelectorAll("[data-route]");
@@ -420,6 +423,17 @@ function setStatus(message, type = "") {
   statusMessageEl.className = `status-message${type ? ` ${type}` : ""}`;
 }
 
+function renderResultPanel() {
+  resultPanelEl.className = resultRailCollapsed ? "result-rail collapsed" : "result-rail";
+  resultPanelToggleEl.setAttribute("aria-expanded", resultRailCollapsed ? "false" : "true");
+}
+
+function toggleResultPanel() {
+  resultRailCollapsed = !resultRailCollapsed;
+  renderResultPanel();
+  requestAnimationFrame(renderEdges);
+}
+
 function serializeGraph() {
   return {
     nodes: graph.nodes.map((node) => ({
@@ -511,6 +525,7 @@ async function init() {
   }
 
   render();
+  renderResultPanel();
   setActiveView(activeViewFromHash());
 }
 
@@ -522,6 +537,7 @@ document.getElementById("reset-graph").addEventListener("click", () => {
 });
 
 nodeSearchEl.addEventListener("input", renderLibrary);
+resultPanelToggleEl.addEventListener("click", toggleResultPanel);
 
 document.getElementById("copy-code").addEventListener("click", async () => {
   await navigator.clipboard.writeText(pythonCodeEl.textContent);

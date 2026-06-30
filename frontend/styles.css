@@ -102,7 +102,7 @@ button:hover {
 
 .planner-workbench {
   display: grid;
-  grid-template-columns: 280px minmax(520px, 1fr) 320px;
+  grid-template-columns: 280px minmax(520px, 1fr) minmax(44px, 320px);
   gap: 12px;
   min-height: calc(100vh - 72px);
   padding: 12px;
@@ -265,6 +265,44 @@ button:hover {
   align-self: stretch;
   overflow: auto;
   padding: 0;
+  width: 320px;
+  transition: width 120ms ease;
+}
+
+.result-rail.collapsed {
+  width: 44px;
+  overflow: hidden;
+}
+
+.result-toggle {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 44px;
+  border-width: 0 0 1px;
+  border-radius: 8px 8px 0 0;
+  background: #ffffff;
+}
+
+.result-toggle-label {
+  display: inline-block;
+  transform: rotate(90deg);
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.result-rail:not(.collapsed) .result-toggle {
+  justify-items: start;
+  padding-left: 12px;
+}
+
+.result-rail:not(.collapsed) .result-toggle-label {
+  transform: none;
+}
+
+.result-rail.collapsed .result-section {
+  display: none;
 }
 
 .result-section > summary {
