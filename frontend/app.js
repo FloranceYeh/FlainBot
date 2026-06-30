@@ -729,7 +729,7 @@ function nodeToPython(node) {
       `    system_prompt=${quote(node.props.system_prompt)},\n` +
       `    user_prompt=${quote(node.props.user_prompt)},\n` +
       `    tools_json=${quote(node.props.tools_json)},\n` +
-      `    context_json=${quote(node.props.context_json)},\n` +
+      `    contexts_json=${quote(node.props.contexts_json)},\n` +
       "))";
   }
 

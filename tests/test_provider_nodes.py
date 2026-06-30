@@ -52,6 +52,49 @@ class ProviderNodeTests(unittest.TestCase):
         self.assertEqual(outputs["response"]["choices"][0]["message"]["content"], "hello from openai")
         self.assertEqual(outputs["text"], "hello from openai")
 
+    def test_provider_call_node_posts_openai_prompt_payload(self):
+        calls = []
+
+        def fake_transport(url, headers, body):
+            calls.append((url, headers, body))
+            return {"choices": [{"message": {"content": "payload reply"}}]}
+
+        node = ProviderCallNode(
+            provider={
+                "id": "openai_main",
+                "format": "openai_chat",
+                "base_url": "https://api.openai.test/v1",
+                "api_key": "test-key",
+                "model": "gpt-test",
+            },
+            transport=fake_transport,
+        )
+
+        outputs = node.run(
+            {
+                "json": {
+                    "system_prompt": "System",
+                    "contexts": [{"role": "assistant", "content": "Previous"}],
+                    "prompt": "Hello",
+                    "tools": [{"type": "function", "function": {"name": "search"}}],
+                }
+            }
+        )
+
+        self.assertEqual(
+            calls[0][2],
+            {
+                "model": "gpt-test",
+                "messages": [
+                    {"role": "system", "content": "System"},
+                    {"role": "assistant", "content": "Previous"},
+                    {"role": "user", "content": "Hello"},
+                ],
+                "tools": [{"type": "function", "function": {"name": "search"}}],
+            },
+        )
+        self.assertEqual(outputs["text"], "payload reply")
+
     def test_provider_call_node_posts_anthropic_messages_format_and_writes_output(self):
         calls = []
 
@@ -87,6 +130,50 @@ class ProviderNodeTests(unittest.TestCase):
         self.assertEqual(outputs["request"], calls[0][2])
         self.assertEqual(outputs["response"]["content"][0]["text"], "hello from anthropic")
         self.assertEqual(outputs["text"], "hello from anthropic")
+
+    def test_provider_call_node_posts_anthropic_prompt_payload(self):
+        calls = []
+
+        def fake_transport(url, headers, body):
+            calls.append((url, headers, body))
+            return {"content": [{"type": "text", "text": "payload reply"}]}
+
+        node = ProviderCallNode(
+            provider={
+                "id": "anthropic_main",
+                "format": "anthropic_messages",
+                "base_url": "https://api.anthropic.test/v1",
+                "api_key": "test-key",
+                "model": "claude-test",
+            },
+            transport=fake_transport,
+        )
+
+        outputs = node.run(
+            {
+                "json": {
+                    "system_prompt": "System",
+                    "contexts": [{"role": "assistant", "content": "Previous"}],
+                    "prompt": "Hello",
+                    "tools": [{"name": "search", "input_schema": {"type": "object"}}],
+                }
+            }
+        )
+
+        self.assertEqual(
+            calls[0][2],
+            {
+                "model": "claude-test",
+                "max_tokens": 1024,
+                "system": "System",
+                "messages": [
+                    {"role": "assistant", "content": "Previous"},
+                    {"role": "user", "content": "Hello"},
+                ],
+                "tools": [{"name": "search", "input_schema": {"type": "object"}}],
+            },
+        )
+        self.assertEqual(outputs["text"], "payload reply")
 
 
 if __name__ == "__main__":

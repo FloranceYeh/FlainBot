@@ -18,7 +18,7 @@ class GraphConfigTests(unittest.TestCase):
             system_prompt="You are concise.",
             user_prompt="Summarize this.",
             tools_json='[{"name": "search"}]',
-            context_json='{"locale": "zh-CN"}',
+            contexts_json='[{"role": "system", "content": "Use zh-CN."}]',
         )
 
         outputs = node.run({})
@@ -27,10 +27,10 @@ class GraphConfigTests(unittest.TestCase):
             outputs,
             {
                 "json": {
-                    "system": "You are concise.",
-                    "user": "Summarize this.",
+                    "system_prompt": "You are concise.",
+                    "prompt": "Summarize this.",
                     "tools": [{"name": "search"}],
-                    "context": {"locale": "zh-CN"},
+                    "contexts": [{"role": "system", "content": "Use zh-CN."}],
                 }
             },
         )
@@ -40,7 +40,7 @@ class GraphConfigTests(unittest.TestCase):
             system_prompt="default system",
             user_prompt="default user",
             tools_json="[]",
-            context_json="{}",
+            contexts_json="[]",
         )
 
         outputs = node.run(
@@ -48,17 +48,17 @@ class GraphConfigTests(unittest.TestCase):
                 "system": "input system",
                 "user": "input user",
                 "tools": [{"name": "calculator"}],
-                "context": '{"request_id": "abc"}',
+                "contexts": '[{"role": "assistant", "content": "previous"}]',
             }
         )
 
         self.assertEqual(
             outputs["json"],
             {
-                "system": "input system",
-                "user": "input user",
+                "system_prompt": "input system",
+                "prompt": "input user",
                 "tools": [{"name": "calculator"}],
-                "context": {"request_id": "abc"},
+                "contexts": [{"role": "assistant", "content": "previous"}],
             },
         )
 
@@ -139,7 +139,7 @@ class GraphConfigTests(unittest.TestCase):
                         "system_prompt": "System",
                         "user_prompt": "User",
                         "tools_json": '[{"name": "search"}]',
-                        "context_json": "{}",
+                        "contexts_json": "[]",
                     },
                 },
             ],
@@ -152,10 +152,10 @@ class GraphConfigTests(unittest.TestCase):
         self.assertEqual(
             outputs["prompt_builder_1"]["json"],
             {
-                "system": "System",
-                "user": "User",
+                "system_prompt": "System",
+                "prompt": "User",
                 "tools": [{"name": "search"}],
-                "context": {},
+                "contexts": [],
             },
         )
 

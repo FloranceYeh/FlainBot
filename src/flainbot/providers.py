@@ -41,10 +41,13 @@ class ProviderCallNode:
         raise ValueError(f"unsupported provider format: {self.format}")
 
     def _run_openai_chat(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        prompt_payload = prompt_payload_from_inputs(inputs)
         request_body: JsonObject = {
             "model": self.model,
-            "messages": [{"role": "user", "content": inputs["text"]}],
+            "messages": openai_messages_from_prompt_payload(prompt_payload),
         }
+        if prompt_payload["tools"]:
+            request_body["tools"] = prompt_payload["tools"]
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -59,11 +62,16 @@ class ProviderCallNode:
         }
 
     def _run_anthropic_messages(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        prompt_payload = prompt_payload_from_inputs(inputs)
         request_body: JsonObject = {
             "model": self.model,
             "max_tokens": self.provider.get("max_tokens", 1024),
-            "messages": [{"role": "user", "content": inputs["text"]}],
+            "messages": anthropic_messages_from_prompt_payload(prompt_payload),
         }
+        if prompt_payload["system_prompt"]:
+            request_body["system"] = prompt_payload["system_prompt"]
+        if prompt_payload["tools"]:
+            request_body["tools"] = prompt_payload["tools"]
         headers = {
             "x-api-key": self.api_key,
             "anthropic-version": self.provider.get("anthropic_version", "2023-06-01"),
@@ -75,3 +83,37 @@ class ProviderCallNode:
             "response": response,
             "text": response["content"][0]["text"],
         }
+
+
+def prompt_payload_from_inputs(inputs: dict[str, Any]) -> JsonObject:
+    payload = inputs.get("json")
+    if payload is None:
+        payload = {"prompt": inputs["text"]}
+    if not isinstance(payload, dict):
+        raise TypeError("provider json input must be an object")
+    return {
+        "prompt": payload.get("prompt", ""),
+        "system_prompt": payload.get("system_prompt", ""),
+        "contexts": payload.get("contexts", []),
+        "tools": payload.get("tools", []),
+    }
+
+
+def openai_messages_from_prompt_payload(payload: JsonObject) -> list[JsonObject]:
+    messages: list[JsonObject] = []
+    if payload["system_prompt"]:
+        messages.append({"role": "system", "content": payload["system_prompt"]})
+    messages.extend(payload["contexts"])
+    if payload["prompt"]:
+        messages.append({"role": "user", "content": payload["prompt"]})
+    return messages
+
+
+def anthropic_messages_from_prompt_payload(payload: JsonObject) -> list[JsonObject]:
+    return [
+        message
+        for message in openai_messages_from_prompt_payload(
+            {**payload, "system_prompt": ""}
+        )
+        if message.get("role") != "system"
+    ]

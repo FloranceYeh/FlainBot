@@ -53,7 +53,7 @@ def build_node_from_config(
             system_prompt=props.get("system_prompt", ""),
             user_prompt=props.get("user_prompt", ""),
             tools_json=props.get("tools_json", "[]"),
-            context_json=props.get("context_json", "{}"),
+            contexts_json=props.get("contexts_json", "[]"),
         )
 
     if node_type == "provider_call":

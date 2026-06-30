@@ -70,14 +70,14 @@ def builtin_node_catalog() -> list[dict]:
                                         port("system", "text"),
                                         port("user", "text"),
                                         port("tools", "json"),
-                                        port("context", "json"),
+                                        port("contexts", "json"),
                                     ],
                                     "outputs": [port("json", "json")],
                                     "defaults": {
                                         "system_prompt": "",
                                         "user_prompt": "",
                                         "tools_json": "[]",
-                                        "context_json": "{}",
+                                        "contexts_json": "[]",
                                     },
                                 }
                             ],
@@ -93,8 +93,8 @@ def builtin_node_catalog() -> list[dict]:
                                     "type": "provider_call",
                                     "className": "ProviderCallNode",
                                     "title": "Call Provider",
-                                    "description": "Consumes text and calls a configured provider.",
-                                    "inputs": [port("text", "text")],
+                                    "description": "Consumes text or prompt JSON and calls a configured provider.",
+                                    "inputs": [port("text", "text"), port("json", "json")],
                                     "outputs": [
                                         port("text", "text"),
                                         port("request", "json"),
