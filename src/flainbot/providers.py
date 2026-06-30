@@ -22,22 +22,25 @@ def json_post(url: str, headers: dict[str, str], body: JsonObject) -> JsonObject
     return json.loads(payload)
 
 
-class OpenAIChatNode:
-    name = "openai_chat"
+class ProviderCallNode:
+    name = "provider_call"
 
-    def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        model: str,
-        transport: Transport | None = None,
-    ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, provider: JsonObject, transport: Transport | None = None) -> None:
+        self.provider = provider
+        self.base_url = provider["base_url"].rstrip("/")
+        self.api_key = provider["api_key"]
+        self.model = provider["model"]
+        self.format = provider["format"]
         self._transport = transport or json_post
 
     def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        if self.format == "openai_chat":
+            return self._run_openai_chat(inputs)
+        if self.format == "anthropic_messages":
+            return self._run_anthropic_messages(inputs)
+        raise ValueError(f"unsupported provider format: {self.format}")
+
+    def _run_openai_chat(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {
             "model": self.model,
             "messages": [{"role": "user", "content": inputs["text"]}],
@@ -55,35 +58,15 @@ class OpenAIChatNode:
             "text": response["choices"][0]["message"]["content"],
         }
 
-
-class AnthropicMessagesNode:
-    name = "anthropic_messages"
-
-    def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        model: str,
-        transport: Transport | None = None,
-        max_tokens: int = 1024,
-        anthropic_version: str = "2023-06-01",
-    ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
-        self.model = model
-        self.max_tokens = max_tokens
-        self.anthropic_version = anthropic_version
-        self._transport = transport or json_post
-
-    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+    def _run_anthropic_messages(self, inputs: dict[str, Any]) -> dict[str, Any]:
         request_body: JsonObject = {
             "model": self.model,
-            "max_tokens": self.max_tokens,
+            "max_tokens": self.provider.get("max_tokens", 1024),
             "messages": [{"role": "user", "content": inputs["text"]}],
         }
         headers = {
             "x-api-key": self.api_key,
-            "anthropic-version": self.anthropic_version,
+            "anthropic-version": self.provider.get("anthropic_version", "2023-06-01"),
             "Content-Type": "application/json",
         }
         response = self._transport(f"{self.base_url}/messages", headers, request_body)

@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PromptBuilderNode
+from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PromptBuilderNode, ProviderCallNode
 from flainbot.config import build_graph_from_config
 
 
@@ -70,12 +70,10 @@ class GraphConfigTests(unittest.TestCase):
             "nodes": [
                 {"id": "chat_input_1", "type": "chat_input", "props": {}},
                 {
-                    "id": "openai_1",
-                    "type": "openai",
+                    "id": "provider_1",
+                    "type": "provider_call",
                     "props": {
-                        "base_url": "https://api.openai.test/v1",
-                        "api_key": "key",
-                        "model": "gpt-test",
+                        "provider_id": "openai_main",
                     },
                 },
                 {"id": "chat_output_1", "type": "chat_output", "props": {}},
@@ -84,22 +82,52 @@ class GraphConfigTests(unittest.TestCase):
                 {
                     "from_node": "chat_input_1",
                     "from_port": "text",
-                    "to_node": "openai_1",
+                    "to_node": "provider_1",
                     "to_port": "text",
                 },
                 {
-                    "from_node": "openai_1",
+                    "from_node": "provider_1",
                     "from_port": "text",
                     "to_node": "chat_output_1",
                     "to_port": "text",
                 },
             ],
+            "providers": [
+                {
+                    "id": "openai_main",
+                    "format": "openai_chat",
+                    "base_url": "https://api.openai.test/v1",
+                    "api_key": "key",
+                    "model": "gpt-test",
+                },
+            ],
         }
 
-        graph = build_graph_from_config(config, message="hello", transports={"openai": fake_transport})
+        graph = build_graph_from_config(config, message="hello", transports={"openai_chat": fake_transport})
         outputs = GraphExecutor(graph).run()
 
         self.assertEqual(outputs["chat_output_1"]["reply"], "echo: hello")
+
+    def test_build_graph_from_config_resolves_provider_call_node(self):
+        config = {
+            "nodes": [
+                {"id": "provider_1", "type": "provider_call", "props": {"provider_id": "anthropic_main"}},
+            ],
+            "edges": [],
+            "providers": [
+                {
+                    "id": "anthropic_main",
+                    "format": "anthropic_messages",
+                    "base_url": "https://api.anthropic.test/v1",
+                    "api_key": "key",
+                    "model": "claude-test",
+                },
+            ],
+        }
+
+        graph = build_graph_from_config(config, message="", transports={"anthropic_messages": lambda *_: {"content": [{"text": "ok"}]}})
+
+        self.assertIsInstance(graph.nodes["provider_1"], ProviderCallNode)
 
     def test_build_graph_from_config_executes_prompt_builder(self):
         config = {

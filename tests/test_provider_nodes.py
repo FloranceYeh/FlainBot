@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import AnthropicMessagesNode, ChatInputNode, ChatOutputNode, OpenAIChatNode
+from flainbot import ChatInputNode, ChatOutputNode, ProviderCallNode
 
 
 class ProviderNodeTests(unittest.TestCase):
@@ -18,25 +18,26 @@ class ProviderNodeTests(unittest.TestCase):
 
         self.assertEqual(outputs, {"reply": "reply"})
 
-    def test_openai_chat_node_posts_chat_completion_and_writes_output(self):
+    def test_provider_call_node_posts_openai_chat_format_and_writes_output(self):
         calls = []
 
         def fake_transport(url, headers, body):
             calls.append((url, headers, body))
             return {"choices": [{"message": {"content": "hello from openai"}}]}
 
-        node = OpenAIChatNode(
-            base_url="https://api.openai.test/v1",
-            api_key="test-key",
-            model="gpt-test",
+        node = ProviderCallNode(
+            provider={
+                "id": "openai_main",
+                "format": "openai_chat",
+                "base_url": "https://api.openai.test/v1",
+                "api_key": "test-key",
+                "model": "gpt-test",
+            },
             transport=fake_transport,
         )
 
         outputs = node.run({"text": "hello"})
 
-        self.assertEqual(node.base_url, "https://api.openai.test/v1")
-        self.assertEqual(node.api_key, "test-key")
-        self.assertEqual(node.model, "gpt-test")
         self.assertEqual(calls[0][0], "https://api.openai.test/v1/chat/completions")
         self.assertEqual(calls[0][1]["Authorization"], "Bearer test-key")
         self.assertEqual(calls[0][1]["Content-Type"], "application/json")
@@ -51,25 +52,26 @@ class ProviderNodeTests(unittest.TestCase):
         self.assertEqual(outputs["response"]["choices"][0]["message"]["content"], "hello from openai")
         self.assertEqual(outputs["text"], "hello from openai")
 
-    def test_anthropic_messages_node_posts_message_and_writes_output(self):
+    def test_provider_call_node_posts_anthropic_messages_format_and_writes_output(self):
         calls = []
 
         def fake_transport(url, headers, body):
             calls.append((url, headers, body))
             return {"content": [{"type": "text", "text": "hello from anthropic"}]}
 
-        node = AnthropicMessagesNode(
-            base_url="https://api.anthropic.test/v1",
-            api_key="test-key",
-            model="claude-test",
+        node = ProviderCallNode(
+            provider={
+                "id": "anthropic_main",
+                "format": "anthropic_messages",
+                "base_url": "https://api.anthropic.test/v1",
+                "api_key": "test-key",
+                "model": "claude-test",
+            },
             transport=fake_transport,
         )
 
         outputs = node.run({"text": "hello"})
 
-        self.assertEqual(node.base_url, "https://api.anthropic.test/v1")
-        self.assertEqual(node.api_key, "test-key")
-        self.assertEqual(node.model, "claude-test")
         self.assertEqual(calls[0][0], "https://api.anthropic.test/v1/messages")
         self.assertEqual(calls[0][1]["x-api-key"], "test-key")
         self.assertEqual(calls[0][1]["anthropic-version"], "2023-06-01")

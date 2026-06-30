@@ -29,12 +29,21 @@ class WebChatTests(unittest.TestCase):
             {
                 "nodes": [
                     {"id": "chat_input_1", "type": "chat_input", "props": {}},
-                    {"id": "echo_1", "type": "openai", "props": {"base_url": "x", "api_key": "k", "model": "m"}},
+                    {"id": "echo_1", "type": "provider_call", "props": {"provider_id": "openai_main"}},
                     {"id": "chat_output_1", "type": "chat_output", "props": {}},
                 ],
                 "edges": [
                     {"from_node": "chat_input_1", "from_port": "text", "to_node": "echo_1", "to_port": "text"},
                     {"from_node": "echo_1", "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+                ],
+                "providers": [
+                    {
+                        "id": "openai_main",
+                        "format": "openai_chat",
+                        "base_url": "x",
+                        "api_key": "k",
+                        "model": "m",
+                    }
                 ],
             }
         )
@@ -42,7 +51,7 @@ class WebChatTests(unittest.TestCase):
         def fake_transport(url, headers, body):
             return {"choices": [{"message": {"content": f"echo: {body['messages'][0]['content']}"}}]}
 
-        reply = web_chat.run_chat("hello", store, transports={"openai": fake_transport})
+        reply = web_chat.run_chat("hello", store, transports={"openai_chat": fake_transport})
 
         self.assertEqual(reply, {"reply": "echo: hello"})
 
@@ -104,14 +113,14 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("chat_input", node_types)
             self.assertIn("chat_output", node_types)
             self.assertIn("prompt_builder", node_types)
-            self.assertIn("openai", node_types)
-            self.assertIn("anthropic", node_types)
+            self.assertIn("provider_call", node_types)
+            self.assertNotIn("openai", node_types)
+            self.assertNotIn("anthropic", node_types)
             class_names = {node["className"] for node in catalog}
             self.assertIn("ChatInputNode", class_names)
             self.assertIn("ChatOutputNode", class_names)
             self.assertIn("PromptBuilderNode", class_names)
-            self.assertIn("OpenAIChatNode", class_names)
-            self.assertIn("AnthropicMessagesNode", class_names)
+            self.assertIn("ProviderCallNode", class_names)
             prompt_builder = next(node for node in catalog if node["type"] == "prompt_builder")
             self.assertEqual(prompt_builder["outputs"], ["json"])
             self.assertIn("system_prompt", prompt_builder["defaults"])
