@@ -15,6 +15,7 @@
         </div>
         <nav class="topbar-tabs" aria-label="Views">
           <button class="view-tab" data-route="planner" type="button">Planner</button>
+          <button class="view-tab" data-route="providers" type="button">Providers</button>
           <button class="view-tab" data-route="chat" type="button">Chat</button>
         </nav>
         <div class="topbar-actions">
@@ -63,6 +64,47 @@
               <pre><code id="python-code"></code></pre>
             </div>
           </aside>
+        </section>
+
+        <section id="providers-view" class="view providers-shell" data-view="providers" hidden>
+          <section class="panel provider-editor" aria-labelledby="providers-title">
+            <div class="section-header">
+              <h2 id="providers-title">Providers</h2>
+              <span class="count">Create reusable provider configs for Call Provider nodes.</span>
+            </div>
+            <form id="provider-form" class="provider-form" autocomplete="off">
+              <div class="field">
+                <label>ID</label>
+                <input name="id" placeholder="openai_main" required>
+              </div>
+              <div class="field">
+                <label>Format</label>
+                <select name="format">
+                  <option value="openai_chat">OpenAI Chat</option>
+                  <option value="anthropic_messages">Anthropic Messages</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Base URL</label>
+                <input name="base_url" placeholder="https://api.openai.com/v1" required>
+              </div>
+              <div class="field">
+                <label>API Key</label>
+                <input name="api_key" type="password">
+              </div>
+              <div class="field">
+                <label>Model</label>
+                <input name="model" placeholder="gpt-4.1-mini" required>
+              </div>
+              <button type="submit">Save Provider</button>
+            </form>
+          </section>
+          <section class="panel provider-list-panel" aria-labelledby="provider-list-title">
+            <div class="section-header">
+              <h2 id="provider-list-title">Configured Providers</h2>
+            </div>
+            <div id="provider-list" class="provider-list"></div>
+          </section>
         </section>
 
         <section id="chat-view" class="view chat-shell" data-view="chat" hidden>

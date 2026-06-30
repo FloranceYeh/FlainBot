@@ -9,12 +9,11 @@ from typing import Mapping
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from flainbot import (
-    AnthropicMessagesNode,
     ChatInputNode,
     ChatOutputNode,
     Graph,
     GraphExecutor,
-    OpenAIChatNode,
+    ProviderCallNode,
 )
 
 DEFAULT_BASE_URLS = {
@@ -43,20 +42,28 @@ def build_node(
         api_key = env.get(API_KEY_ENV[provider])
         if not api_key:
             raise SystemExit(f"{API_KEY_ENV[provider]} is required")
-        return OpenAIChatNode(
-            base_url=base_url or DEFAULT_BASE_URLS[provider],
-            api_key=api_key,
-            model=model,
+        return ProviderCallNode(
+            {
+                "id": "openai_smoke",
+                "format": "openai_chat",
+                "base_url": base_url or DEFAULT_BASE_URLS[provider],
+                "api_key": api_key,
+                "model": model,
+            }
         )
 
     if provider == "anthropic":
         api_key = env.get(API_KEY_ENV[provider])
         if not api_key:
             raise SystemExit(f"{API_KEY_ENV[provider]} is required")
-        return AnthropicMessagesNode(
-            base_url=base_url or DEFAULT_BASE_URLS[provider],
-            api_key=api_key,
-            model=model,
+        return ProviderCallNode(
+            {
+                "id": "anthropic_smoke",
+                "format": "anthropic_messages",
+                "base_url": base_url or DEFAULT_BASE_URLS[provider],
+                "api_key": api_key,
+                "model": model,
+            }
         )
 
     raise SystemExit(f"unsupported provider: {provider}")

@@ -1,5 +1,6 @@
 let nodeCatalog = [];
 let graph = {nodes: [], edges: []};
+let providers = [];
 let selectedId = null;
 let connectionDrag = null;
 let dragState = null;
@@ -24,6 +25,8 @@ const viewTabEls = document.querySelectorAll("[data-route]");
 const chatFormEl = document.getElementById("chat-form");
 const messageInputEl = document.getElementById("message-input");
 const messagesEl = document.getElementById("messages");
+const providerFormEl = document.getElementById("provider-form");
+const providerListEl = document.getElementById("provider-list");
 
 function defaultApiBaseUrl() {
   if (window.location.protocol === "file:" || window.location.port === "5500") {
@@ -58,6 +61,30 @@ async function loadNodeCatalog() {
     throw new Error(`Could not load node catalog: ${response.status}`);
   }
   nodeCatalog = await response.json();
+}
+
+async function loadProviders() {
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/providers"));
+  } catch (error) {
+    throw new Error("Could not load providers. Start server with: python start.py");
+  }
+  if (!response.ok) {
+    throw new Error(`Could not load providers: ${response.status}`);
+  }
+  providers = await response.json();
+}
+
+async function saveProviders() {
+  const response = await fetch(apiUrl("/api/providers"), {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(providers),
+  });
+  if (!response.ok) {
+    throw new Error(`provider save failed: ${response.status}`);
+  }
 }
 
 function addNode(type) {
@@ -120,7 +147,7 @@ function categoryForNode(node) {
   if (node.type.includes("output")) {
     return "Output";
   }
-  if (node.type === "openai" || node.type === "anthropic") {
+  if (node.type === "provider_call") {
     return "Provider";
   }
   return "Other";
@@ -240,6 +267,10 @@ function renderPorts(node, direction) {
 }
 
 function renderProperties(node) {
+  if (node.type === "provider_call") {
+    return renderProviderSelect(node);
+  }
+
   const entries = Object.entries(node.props);
   if (entries.length === 0) {
     return "";
@@ -253,6 +284,23 @@ function renderProperties(node) {
           <input data-prop-key="${key}" value="${value}" ${key === "api_key" ? 'type="password"' : ""}>
         </div>
       `).join("")}
+    </form>
+  `;
+}
+
+function renderProviderSelect(node) {
+  const options = providers.map((provider) => (
+    `<option value="${provider.id}" ${node.props.provider_id === provider.id ? "selected" : ""}>${provider.id} / ${provider.format}</option>`
+  )).join("");
+  return `
+    <form class="node-properties" autocomplete="off">
+      <div class="field">
+        <label>provider_id</label>
+        <select data-prop-key="provider_id">
+          <option value="">Select provider</option>
+          ${options}
+        </select>
+      </div>
     </form>
   `;
 }
@@ -448,12 +496,9 @@ function nodeToPython(node) {
     return `graph.add_node(${quote(node.id)}, ChatInputNode("message from web chat"))`;
   }
 
-  if (node.type === "openai" || node.type === "anthropic") {
-    return `graph.add_node(${quote(node.id)}, ${node.className}(\n` +
-      `    base_url=${quote(node.props.base_url)},\n` +
-      `    api_key=${quote(node.props.api_key)},\n` +
-      `    model=${quote(node.props.model)},\n` +
-      "))";
+  if (node.type === "provider_call") {
+    const provider = providers.find((item) => item.id === node.props.provider_id) || {id: node.props.provider_id};
+    return `graph.add_node(${quote(node.id)}, ProviderCallNode(provider=${quote(provider)}))`;
   }
 
   if (node.type === "prompt_builder") {
@@ -511,6 +556,7 @@ function serializeGraph() {
       y: node.y,
     })),
     edges: graph.edges,
+    providers,
   };
 }
 
@@ -531,7 +577,13 @@ async function saveGraph() {
 }
 
 function activeViewFromHash() {
-  return window.location.hash === "#chat" ? "chat" : "planner";
+  if (window.location.hash === "#chat") {
+    return "chat";
+  }
+  if (window.location.hash === "#providers") {
+    return "providers";
+  }
+  return "planner";
 }
 
 function setActiveView(view) {
@@ -550,12 +602,50 @@ function setActiveView(view) {
 }
 
 function navigateToView(view) {
-  const hash = view === "chat" ? "#chat" : "#planner";
+  const hash = view === "planner" ? "#planner" : `#${view}`;
   if (window.location.hash === hash) {
     setActiveView(view);
     return;
   }
   window.location.hash = hash;
+}
+
+function providerFromForm(form) {
+  const data = new FormData(form);
+  return {
+    id: data.get("id").trim(),
+    format: data.get("format"),
+    base_url: data.get("base_url").trim(),
+    api_key: data.get("api_key"),
+    model: data.get("model").trim(),
+  };
+}
+
+function renderProviders() {
+  providerListEl.innerHTML = "";
+  if (providers.length === 0) {
+    providerListEl.innerHTML = '<p class="empty-state">No providers configured.</p>';
+    return;
+  }
+  providers.forEach((provider) => {
+    const item = document.createElement("article");
+    item.className = "provider-card";
+    item.innerHTML = `
+      <div>
+        <span class="node-type">${provider.format}</span>
+        <h3>${provider.id}</h3>
+        <p>${provider.base_url} / ${provider.model}</p>
+      </div>
+      <button type="button" class="danger" data-remove-provider="${provider.id}">Remove</button>
+    `;
+    item.querySelector("button").addEventListener("click", async () => {
+      providers = providers.filter((item) => item.id !== provider.id);
+      await saveProviders();
+      renderProviders();
+      render();
+    });
+    providerListEl.appendChild(item);
+  });
 }
 
 function appendMessage(role, text) {
@@ -586,7 +676,9 @@ function render() {
 async function init() {
   try {
     await loadNodeCatalog();
+    await loadProviders();
     renderLibrary();
+    renderProviders();
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -601,6 +693,22 @@ document.getElementById("reset-graph").addEventListener("click", () => {
   selectedId = null;
   connectionDrag = null;
   render();
+});
+
+providerFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const provider = providerFromForm(event.currentTarget);
+  providers = providers.filter((item) => item.id !== provider.id);
+  providers.push(provider);
+  try {
+    await saveProviders();
+    event.currentTarget.reset();
+    renderProviders();
+    render();
+    setStatus("Provider saved.", "success");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
 });
 
 nodeSearchEl.addEventListener("input", renderLibrary);
