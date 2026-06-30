@@ -123,6 +123,14 @@
                   :data-node-id="node.id"
                   @pointerdown="selectNode(node.id)"
                 >
+                  <button
+                    type="button"
+                    class="node-remove-triangle"
+                    title="Remove node"
+                    :aria-label="`Remove ${node.id}`"
+                    @pointerdown.stop
+                    @click.stop="removeNode(node.id)"
+                  ></button>
                   <div class="node-header" data-drag-handle="true" @pointerdown.stop="startDrag($event, node.id)">
                     <span class="node-type">{{ node.id }} / {{ node.className }}</span>
                     <h3>{{ node.title }}</h3>
@@ -160,9 +168,6 @@
                         </div>
                       </template>
                     </form>
-                    <div class="node-actions">
-                      <button type="button" class="danger" data-action="remove" @click="removeNode(node.id)">Remove</button>
-                    </div>
                   </div>
                 </article>
               </div>

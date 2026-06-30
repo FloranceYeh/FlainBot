@@ -514,6 +514,35 @@ main {
   box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.16), 0 8px 22px rgba(24, 32, 45, 0.12);
 }
 
+.node-remove-triangle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 0 7px 0 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.node-remove-triangle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 18px solid var(--danger);
+  border-left: 18px solid transparent;
+}
+
+.node-remove-triangle:hover::before {
+  border-top-color: #d92d20;
+}
+
 .node-header {
   cursor: grab;
   border-bottom: 1px solid var(--panel-border);
@@ -694,11 +723,6 @@ main {
   overflow: hidden;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
-}
-
-.node-actions {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .danger {
