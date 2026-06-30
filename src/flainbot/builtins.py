@@ -52,6 +52,39 @@ class PromptBuilderNode:
         }
 
 
+class PersonaNode:
+    name = "persona"
+
+    def __init__(self, persona: dict[str, Any]) -> None:
+        self.persona = normalize_persona(persona)
+
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        payload = prompt_payload_from_persona_inputs(inputs)
+        persona_prompt = self.persona["system_prompt"]
+        payload_prompt = payload.get("system_prompt", "")
+        system_prompt = "\n\n".join(
+            part for part in [persona_prompt, payload_prompt] if part
+        )
+        contexts = processed_begin_dialogs(self.persona["begin_dialogs"]) + parse_contexts(
+            payload.get("contexts", [])
+        )
+        persona_tools = self.persona["tools"]
+        tools = parse_json_value(persona_tools, []) if persona_tools is not None else parse_json_value(
+            payload.get("tools", []), []
+        )
+        return {
+            "json": {
+                "system_prompt": system_prompt,
+                "prompt": payload.get("prompt", ""),
+                "contexts": contexts,
+                "tools": tools,
+                "skills": self.persona["skills"] or [],
+                "custom_error_message": self.persona["custom_error_message"],
+                "persona_id": self.persona["persona_id"],
+            }
+        }
+
+
 def parse_json_value(value: Any, empty_value: Any) -> Any:
     if value == "":
         return empty_value
@@ -67,3 +100,45 @@ def parse_contexts(value: Any) -> list[dict[str, Any]]:
     if not isinstance(contexts, list):
         raise TypeError("contexts must be a list of messages")
     return contexts
+
+
+def prompt_payload_from_persona_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    payload = inputs.get("json")
+    if payload is None:
+        payload = {"prompt": inputs.get("text", "")}
+    if not isinstance(payload, dict):
+        raise TypeError("persona json input must be an object")
+    return {
+        "system_prompt": payload.get("system_prompt", ""),
+        "prompt": payload.get("prompt", ""),
+        "contexts": payload.get("contexts", []),
+        "tools": payload.get("tools", []),
+    }
+
+
+def normalize_persona(persona: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "persona_id": str(persona.get("persona_id", "")).strip(),
+        "system_prompt": str(persona.get("system_prompt", "")).strip(),
+        "begin_dialogs": persona.get("begin_dialogs") or [],
+        "tools": persona.get("tools"),
+        "skills": persona.get("skills"),
+        "custom_error_message": persona.get("custom_error_message"),
+    }
+
+
+def processed_begin_dialogs(begin_dialogs: list[str]) -> list[dict[str, Any]]:
+    if len(begin_dialogs) % 2 != 0:
+        raise ValueError("persona begin_dialogs must contain user/assistant pairs")
+    messages = []
+    user_turn = True
+    for dialog in begin_dialogs:
+        messages.append(
+            {
+                "role": "user" if user_turn else "assistant",
+                "content": dialog,
+                "_no_save": True,
+            }
+        )
+        user_turn = not user_turn
+    return messages

@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PromptBuilderNode, ProviderCallNode
+from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PersonaNode, PromptBuilderNode, ProviderCallNode
 from flainbot.config import build_graph_from_config
 
 
@@ -59,6 +59,73 @@ class GraphConfigTests(unittest.TestCase):
                 "prompt": "input user",
                 "tools": [{"name": "calculator"}],
                 "contexts": [{"role": "assistant", "content": "previous"}],
+            },
+        )
+
+    def test_persona_node_applies_persona_to_prompt_payload(self):
+        node = PersonaNode(
+            persona={
+                "persona_id": "cat",
+                "system_prompt": "You are a cat.",
+                "begin_dialogs": ["Hi", "Meow."],
+                "tools": [{"type": "function", "function": {"name": "scratch"}}],
+                "skills": ["roleplay"],
+                "custom_error_message": "Hiss.",
+            }
+        )
+
+        outputs = node.run(
+            {
+                "json": {
+                    "system_prompt": "Answer briefly.",
+                    "prompt": "Hello",
+                    "contexts": [{"role": "assistant", "content": "Previous"}],
+                    "tools": [{"type": "function", "function": {"name": "search"}}],
+                }
+            }
+        )
+
+        self.assertEqual(
+            outputs["json"],
+            {
+                "system_prompt": "You are a cat.\n\nAnswer briefly.",
+                "prompt": "Hello",
+                "contexts": [
+                    {"role": "user", "content": "Hi", "_no_save": True},
+                    {"role": "assistant", "content": "Meow.", "_no_save": True},
+                    {"role": "assistant", "content": "Previous"},
+                ],
+                "tools": [{"type": "function", "function": {"name": "scratch"}}],
+                "skills": ["roleplay"],
+                "custom_error_message": "Hiss.",
+                "persona_id": "cat",
+            },
+        )
+
+    def test_persona_node_can_create_prompt_payload_from_text(self):
+        node = PersonaNode(
+            persona={
+                "persona_id": "default",
+                "system_prompt": "You are helpful.",
+                "begin_dialogs": [],
+                "tools": None,
+                "skills": None,
+                "custom_error_message": None,
+            }
+        )
+
+        outputs = node.run({"text": "Hello"})
+
+        self.assertEqual(
+            outputs["json"],
+            {
+                "system_prompt": "You are helpful.",
+                "prompt": "Hello",
+                "contexts": [],
+                "tools": [],
+                "skills": [],
+                "custom_error_message": None,
+                "persona_id": "default",
             },
         )
 
@@ -158,6 +225,45 @@ class GraphConfigTests(unittest.TestCase):
                 "contexts": [],
             },
         )
+
+    def test_build_graph_from_config_executes_persona_node(self):
+        config = {
+            "nodes": [
+                {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                {
+                    "id": "persona_1",
+                    "type": "persona",
+                    "props": {
+                        "persona_id": "cat",
+                    },
+                },
+            ],
+            "edges": [
+                {
+                    "from_node": "chat_input_1",
+                    "from_port": "text",
+                    "to_node": "persona_1",
+                    "to_port": "text",
+                },
+            ],
+            "personas": [
+                {
+                    "persona_id": "cat",
+                    "system_prompt": "You are a cat.",
+                    "begin_dialogs": ["Hi", "Meow."],
+                    "tools": [],
+                    "skills": [],
+                    "custom_error_message": None,
+                }
+            ],
+        }
+
+        graph = build_graph_from_config(config, message="hello")
+        outputs = GraphExecutor(graph).run()
+
+        self.assertEqual(outputs["persona_1"]["json"]["persona_id"], "cat")
+        self.assertEqual(outputs["persona_1"]["json"]["system_prompt"], "You are a cat.")
+        self.assertEqual(outputs["persona_1"]["json"]["prompt"], "hello")
 
 
 if __name__ == "__main__":

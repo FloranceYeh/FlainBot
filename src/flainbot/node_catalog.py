@@ -79,6 +79,19 @@ def builtin_node_catalog() -> list[dict]:
                                         "tools_json": "[]",
                                         "contexts_json": "[]",
                                     },
+                                },
+                                {
+                                    "kind": "node",
+                                    "package": "core",
+                                    "type": "persona",
+                                    "className": "PersonaNode",
+                                    "title": "Apply Persona",
+                                    "description": "Applies a saved persona to text or a prompt JSON payload.",
+                                    "inputs": [port("text", "text"), port("json", "json")],
+                                    "outputs": [port("json", "json")],
+                                    "defaults": {
+                                        "persona_id": "",
+                                    },
                                 }
                             ],
                         },

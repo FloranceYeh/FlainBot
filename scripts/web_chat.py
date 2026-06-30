@@ -18,7 +18,12 @@ FRONTEND = ROOT / "frontend"
 
 class GraphConfigStore:
     def __init__(self, initial_config: dict | None = None) -> None:
-        self._config = initial_config or {"nodes": [], "edges": [], "providers": []}
+        self._config = initial_config or {
+            "nodes": [],
+            "edges": [],
+            "providers": [],
+            "personas": [],
+        }
 
     def save(self, config: dict) -> None:
         self._config = config
@@ -31,6 +36,12 @@ class GraphConfigStore:
 
     def load_providers(self) -> list[dict]:
         return self._config.get("providers", [])
+
+    def save_personas(self, personas: list[dict]) -> None:
+        self._config = {**self._config, "personas": personas}
+
+    def load_personas(self) -> list[dict]:
+        return self._config.get("personas", [])
 
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
@@ -56,6 +67,9 @@ def make_handler(store: GraphConfigStore):
                 return
             if self.path == "/api/providers":
                 self.send_json(store.load_providers())
+                return
+            if self.path == "/api/personas":
+                self.send_json(store.load_personas())
                 return
             if self.path == "/api/nodes":
                 self.send_json(builtin_node_catalog())
@@ -90,6 +104,12 @@ def make_handler(store: GraphConfigStore):
                 self.send_json({"status": "ok"})
                 return
 
+            if self.path == "/api/personas":
+                payload = self.read_json()
+                store.save_personas(payload)
+                self.send_json({"status": "ok"})
+                return
+
             if self.path != "/api/chat":
                 self.send_error(404)
                 return
@@ -98,7 +118,13 @@ def make_handler(store: GraphConfigStore):
             self.send_json(run_chat(payload["message"], store))
 
         def do_OPTIONS(self) -> None:
-            if self.path not in {"/api/graph", "/api/chat", "/api/nodes", "/api/providers"}:
+            if self.path not in {
+                "/api/graph",
+                "/api/chat",
+                "/api/nodes",
+                "/api/providers",
+                "/api/personas",
+            }:
                 self.send_error(404)
                 return
 

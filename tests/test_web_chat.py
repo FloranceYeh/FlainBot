@@ -153,6 +153,42 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_persona_api_saves_and_loads_configs(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        personas = [
+            {
+                "persona_id": "cat",
+                "system_prompt": "You are a cat.",
+                "begin_dialogs": ["Hi", "Meow."],
+                "tools": [],
+                "skills": [],
+                "custom_error_message": None,
+            }
+        ]
+
+        try:
+            body = json.dumps(personas).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/personas",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/personas", timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), personas)
+
+            self.assertEqual(store.load().get("personas"), personas)
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_nodes_api_returns_builtin_node_catalog(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
@@ -197,6 +233,7 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("chat_input", node_types)
             self.assertIn("chat_output", node_types)
             self.assertIn("prompt_builder", node_types)
+            self.assertIn("persona", node_types)
             self.assertIn("provider_call", node_types)
             self.assertNotIn("openai", node_types)
             self.assertNotIn("anthropic", node_types)
@@ -204,6 +241,7 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("ChatInputNode", class_names)
             self.assertIn("ChatOutputNode", class_names)
             self.assertIn("PromptBuilderNode", class_names)
+            self.assertIn("PersonaNode", class_names)
             self.assertIn("ProviderCallNode", class_names)
             self.assertTrue(all(node["package"] == "core" for node in nodes))
             def port_names(ports):
@@ -231,6 +269,12 @@ class WebChatTests(unittest.TestCase):
             provider_call = next(node for node in nodes if node["type"] == "provider_call")
             self.assertEqual(port_names(provider_call["inputs"]), ["text", "json"])
             self.assertEqual(port_types(provider_call["inputs"]), ["text", "json"])
+            persona = next(node for node in nodes if node["type"] == "persona")
+            self.assertEqual(port_names(persona["inputs"]), ["text", "json"])
+            self.assertEqual(port_types(persona["inputs"]), ["text", "json"])
+            self.assertEqual(port_names(persona["outputs"]), ["json"])
+            self.assertEqual(port_types(persona["outputs"]), ["json"])
+            self.assertIn("persona_id", persona["defaults"])
             self.assertTrue(all("inputs" in node and "outputs" in node for node in nodes))
         finally:
             server.shutdown()
@@ -245,7 +289,7 @@ class WebChatTests(unittest.TestCase):
 
         try:
             req = request.Request(
-                f"{base_url}/api/providers",
+                f"{base_url}/api/personas",
                 headers={
                     "Origin": "http://127.0.0.1:5500",
                     "Access-Control-Request-Method": "POST",
@@ -308,7 +352,7 @@ class WebChatTests(unittest.TestCase):
         handler = captured["handler"]
         self.assertEqual(result, 0)
         self.assertEqual(captured["address"], ("127.0.0.1", 8765))
-        self.assertEqual(handler.store.load(), {"nodes": [], "edges": [], "providers": []})
+        self.assertEqual(handler.store.load(), {"nodes": [], "edges": [], "providers": [], "personas": []})
         self.assertIn("http://127.0.0.1:8765/", stdout.getvalue())
 
 
