@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..builtins import ChatInputNode, ChatOutputNode, PersonaNode, PromptBuilderNode
+from ..builtins import ChatInputNode, ChatOutputNode, PersonaNode, PromptBuilderNode, SessionContextNode
 from ..node_registry import NodeBuildContext, NodeBuilder
 from ..providers import ProviderCallNode
 
@@ -64,6 +64,17 @@ def get_node_package() -> dict[str, Any]:
                         "id": "prompting",
                         "title": "Prompting",
                         "items": [
+                            {
+                                "kind": "node",
+                                "package": "core",
+                                "type": "session_context",
+                                "className": "SessionContextNode",
+                                "title": "Session Context",
+                                "description": "Outputs the current web chat session history as JSON messages.",
+                                "inputs": [],
+                                "outputs": [port("json", "json")],
+                                "defaults": {},
+                            },
                             {
                                 "kind": "node",
                                 "package": "core",
@@ -134,6 +145,7 @@ def get_node_builders() -> dict[str, NodeBuilder]:
     return {
         "chat_input": build_chat_input,
         "chat_output": build_chat_output,
+        "session_context": build_session_context,
         "prompt_builder": build_prompt_builder,
         "persona": build_persona,
         "provider_call": build_provider_call,
@@ -146,6 +158,13 @@ def build_chat_input(node_config: dict[str, Any], context: NodeBuildContext) -> 
 
 def build_chat_output(node_config: dict[str, Any], context: NodeBuildContext) -> ChatOutputNode:
     return ChatOutputNode()
+
+
+def build_session_context(
+    node_config: dict[str, Any],
+    context: NodeBuildContext,
+) -> SessionContextNode:
+    return SessionContextNode(context.session_contexts)
 
 
 def build_prompt_builder(

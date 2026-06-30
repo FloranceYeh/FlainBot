@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import importlib
 import pkgutil
 from typing import Any
@@ -20,6 +20,7 @@ class NodeBuildContext:
     transports: dict[str, Transport]
     providers: dict[str, dict[str, Any]]
     personas: dict[str, dict[str, Any]]
+    session_contexts: list[dict[str, Any]] = field(default_factory=list)
 
 
 class NodePackageRegistry:

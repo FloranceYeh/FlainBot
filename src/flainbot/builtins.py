@@ -24,6 +24,16 @@ class ChatOutputNode:
         return {"reply": inputs["text"]}
 
 
+class SessionContextNode:
+    name = "session_context"
+
+    def __init__(self, contexts: list[dict[str, Any]] | None = None) -> None:
+        self.contexts = contexts or []
+
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        return {"json": self.contexts}
+
+
 class PromptBuilderNode:
     name = "prompt_builder"
 

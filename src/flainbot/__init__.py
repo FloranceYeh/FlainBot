@@ -1,4 +1,4 @@
-from .builtins import ChatInputNode, ChatOutputNode, PersonaNode, PromptBuilderNode
+from .builtins import ChatInputNode, ChatOutputNode, PersonaNode, PromptBuilderNode, SessionContextNode
 from .graph import Graph, GraphEdge, GraphError, GraphExecutor
 from .providers import ProviderCallNode
 
@@ -11,5 +11,6 @@ __all__ = [
     "ChatOutputNode",
     "PersonaNode",
     "PromptBuilderNode",
+    "SessionContextNode",
     "ProviderCallNode",
 ]

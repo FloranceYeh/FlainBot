@@ -157,6 +157,83 @@ class WebChatTests(unittest.TestCase):
             ["chat_input_1", "chat_output_1", "chat_output_2", "echo_1"],
         )
 
+    def test_run_chat_maintains_session_context_between_turns(self):
+        requests = []
+
+        def fake_transport(url, headers, body):
+            requests.append(body)
+            return {"choices": [{"message": {"content": f"reply {len(requests)}"}}]}
+
+        store = web_chat.GraphConfigStore(
+            initial_config={
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "session_context_1", "type": "session_context", "props": {}},
+                    {
+                        "id": "prompt_builder_1",
+                        "type": "prompt_builder",
+                        "props": {
+                            "system_prompt": "",
+                            "user_prompt": "",
+                            "tools_json": "[]",
+                            "contexts_json": "[]",
+                        },
+                    },
+                    {"id": "provider_1", "type": "provider_call", "props": {"provider_id": "openai_main"}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "prompt_builder_1", "to_port": "user"},
+                    {
+                        "from_node": "session_context_1",
+                        "from_port": "json",
+                        "to_node": "prompt_builder_1",
+                        "to_port": "contexts",
+                    },
+                    {
+                        "from_node": "prompt_builder_1",
+                        "from_port": "json",
+                        "to_node": "provider_1",
+                        "to_port": "json",
+                    },
+                    {"from_node": "provider_1", "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+                ],
+                "providers": [
+                    {
+                        "id": "openai_main",
+                        "format": "openai_chat",
+                        "base_url": "https://api.openai.test/v1",
+                        "api_key": "key",
+                        "model": "gpt-test",
+                    }
+                ],
+            }
+        )
+
+        first = web_chat.run_chat("hello", store, transports={"openai_chat": fake_transport})
+        second = web_chat.run_chat("again", store, transports={"openai_chat": fake_transport})
+
+        self.assertEqual(first["reply"], "reply 1")
+        self.assertEqual(second["reply"], "reply 2")
+        self.assertEqual(requests[0]["messages"], [{"role": "user", "content": "hello"}])
+        self.assertEqual(
+            requests[1]["messages"],
+            [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "reply 1"},
+                {"role": "user", "content": "again"},
+            ],
+        )
+        self.assertEqual(
+            store.load()["session_contexts"],
+            [
+                {"role": "user", "content": "hello"},
+                {"role": "assistant", "content": "reply 1"},
+                {"role": "user", "content": "again"},
+                {"role": "assistant", "content": "reply 2"},
+            ],
+        )
+
     def test_graph_api_saves_and_loads_config(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
@@ -306,6 +383,7 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("prompt_builder", node_types)
             self.assertIn("persona", node_types)
             self.assertIn("provider_call", node_types)
+            self.assertIn("session_context", node_types)
             self.assertNotIn("openai", node_types)
             self.assertNotIn("anthropic", node_types)
             class_names = {node["className"] for node in nodes}
@@ -314,6 +392,7 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("PromptBuilderNode", class_names)
             self.assertIn("PersonaNode", class_names)
             self.assertIn("ProviderCallNode", class_names)
+            self.assertIn("SessionContextNode", class_names)
             def port_names(ports):
                 return [port["name"] for port in ports]
 
@@ -336,6 +415,11 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("user_prompt", prompt_builder["defaults"])
             self.assertIn("tools_json", prompt_builder["defaults"])
             self.assertIn("contexts_json", prompt_builder["defaults"])
+            session_context = next(node for node in nodes if node["type"] == "session_context")
+            self.assertEqual(port_names(session_context["inputs"]), [])
+            self.assertEqual(port_types(session_context["inputs"]), [])
+            self.assertEqual(port_names(session_context["outputs"]), ["json"])
+            self.assertEqual(port_types(session_context["outputs"]), ["json"])
             provider_call = next(node for node in nodes if node["type"] == "provider_call")
             self.assertEqual(port_names(provider_call["inputs"]), ["text", "json"])
             self.assertEqual(port_types(provider_call["inputs"]), ["text", "json"])

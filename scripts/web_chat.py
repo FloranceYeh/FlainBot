@@ -76,12 +76,28 @@ class GraphConfigStore:
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
     config = store.load()
-    graph = build_graph_from_config(config, message=message, transports=transports)
+    graph = build_graph_from_config(
+        config,
+        message=message,
+        transports=transports,
+        session_contexts=config.get("session_contexts", []),
+    )
     executor = GraphExecutor(graph)
     outputs = executor.run()
     reply_node_ids = find_chat_output_node_ids(config)
     replies = [outputs[node_id]["reply"] for node_id in reply_node_ids]
-    return {"reply": "\n".join(replies), "replies": replies, "trace": executor.trace}
+    reply = "\n".join(replies)
+    store.save(
+        {
+            **config,
+            "session_contexts": config.get("session_contexts", [])
+            + [
+                {"role": "user", "content": message},
+                {"role": "assistant", "content": reply},
+            ],
+        }
+    )
+    return {"reply": reply, "replies": replies, "trace": executor.trace}
 
 
 def find_chat_output_node_id(config: dict) -> str:

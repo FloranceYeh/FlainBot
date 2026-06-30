@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PersonaNode, PromptBuilderNode, ProviderCallNode
+from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PersonaNode, PromptBuilderNode, ProviderCallNode, SessionContextNode
 from flainbot.config import build_graph_from_config
 
 
@@ -61,6 +61,12 @@ class GraphConfigTests(unittest.TestCase):
                 "contexts": [{"role": "assistant", "content": "previous"}],
             },
         )
+
+    def test_session_context_node_outputs_current_history(self):
+        contexts = [{"role": "user", "content": "previous"}]
+        node = SessionContextNode(contexts)
+
+        self.assertEqual(node.run({}), {"json": contexts})
 
     def test_persona_node_applies_persona_to_prompt_payload(self):
         node = PersonaNode(
@@ -225,6 +231,38 @@ class GraphConfigTests(unittest.TestCase):
                 "contexts": [],
             },
         )
+
+    def test_build_graph_from_config_executes_session_context_node(self):
+        config = {
+            "nodes": [
+                {"id": "session_context_1", "type": "session_context", "props": {}},
+                {
+                    "id": "prompt_builder_1",
+                    "type": "prompt_builder",
+                    "props": {
+                        "system_prompt": "",
+                        "user_prompt": "Current",
+                        "tools_json": "[]",
+                        "contexts_json": "[]",
+                    },
+                },
+            ],
+            "edges": [
+                {
+                    "from_node": "session_context_1",
+                    "from_port": "json",
+                    "to_node": "prompt_builder_1",
+                    "to_port": "contexts",
+                },
+            ],
+        }
+
+        session_contexts = [{"role": "user", "content": "previous"}]
+        graph = build_graph_from_config(config, message="", session_contexts=session_contexts)
+        outputs = GraphExecutor(graph).run()
+
+        self.assertEqual(outputs["session_context_1"]["json"], session_contexts)
+        self.assertEqual(outputs["prompt_builder_1"]["json"]["contexts"], session_contexts)
 
     def test_build_graph_from_config_executes_persona_node(self):
         config = {

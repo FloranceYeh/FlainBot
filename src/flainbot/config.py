@@ -12,6 +12,7 @@ def build_graph_from_config(
     message: str,
     transports: dict[str, Transport] | None = None,
     registry: NodePackageRegistry | None = None,
+    session_contexts: list[dict[str, Any]] | None = None,
 ) -> Graph:
     transports = transports or {}
     providers = {provider["id"]: provider for provider in config.get("providers", [])}
@@ -22,6 +23,7 @@ def build_graph_from_config(
         transports=transports,
         providers=providers,
         personas=personas,
+        session_contexts=session_contexts or [],
     )
     graph = Graph()
 
