@@ -28,6 +28,10 @@ export function loadNodeCatalog() {
   return fetchJson("/api/nodes", "Could not load node catalog");
 }
 
+export function loadGraph() {
+  return fetchJson("/api/graph", "Could not load graph");
+}
+
 export function loadProviders() {
   return fetchJson("/api/providers", "Could not load providers");
 }

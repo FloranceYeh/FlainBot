@@ -112,6 +112,7 @@ import ProvidersView from "./views/ProvidersView.vue";
 import PersonasView from "./views/PersonasView.vue";
 import ChatView from "./views/ChatView.vue";
 import {
+  loadGraph,
   loadNodeCatalog,
   loadPersonas,
   loadProviders,
@@ -326,6 +327,30 @@ export default defineComponent({
         providers: providers.value,
         personas: personas.value,
       };
+    }
+
+    function restoreGraph(config) {
+      graph.nodes = (config.nodes || []).flatMap((nodeConfig) => {
+        const spec = flatNodeCatalog.value.find((node) => node.type === nodeConfig.type);
+        if (!spec) {
+          return [];
+        }
+        return [{
+          id: nodeConfig.id,
+          type: spec.type,
+          className: spec.className,
+          title: spec.title,
+          description: spec.description,
+          inputs: spec.inputs,
+          outputs: spec.outputs,
+          props: {...cloneDefaults(spec.defaults), ...(nodeConfig.props || {})},
+          x: Number.isFinite(nodeConfig.x) ? nodeConfig.x : 48,
+          y: Number.isFinite(nodeConfig.y) ? nodeConfig.y : 48,
+        }];
+      });
+      graph.edges = config.edges || [];
+      selectedId.value = graph.nodes[0]?.id ?? null;
+      nextTick(refreshEdgeLayout);
     }
 
     async function handleSaveGraph() {
@@ -733,8 +758,10 @@ export default defineComponent({
       try {
         nodeCatalog.value = await loadNodeCatalog();
         flatNodeCatalog.value = flattenNodeCatalog(nodeCatalog.value);
-        providers.value = await loadProviders();
-        personas.value = await loadPersonas();
+        const savedGraph = await loadGraph();
+        restoreGraph(savedGraph);
+        providers.value = savedGraph.providers || await loadProviders();
+        personas.value = savedGraph.personas || await loadPersonas();
       } catch (error) {
         setStatus(error.message, "error");
       }
