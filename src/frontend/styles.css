@@ -753,6 +753,10 @@ code {
 }
 
 .chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 18px 20px;
   border-bottom: 1px solid var(--panel-border);
 }
@@ -765,6 +769,20 @@ code {
 .chat-header p {
   margin: 4px 0 0;
   color: var(--muted);
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.session-controls select {
+  min-height: 34px;
+  min-width: 160px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
 }
 
 .messages {

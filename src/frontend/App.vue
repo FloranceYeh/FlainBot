@@ -87,9 +87,14 @@
       />
       <ChatView
         :active="activeView === 'chat'"
+        :active-session-id="activeSessionId"
         :messages="messages"
+        :sessions="sessions"
         v-model:message-input="messageInput"
+        @delete-session="handleDeleteSession"
         @messages-ref="messagesEl = $event"
+        @new-session="handleNewSession"
+        @select-session="selectSession"
         @submit="handleChatSubmit"
       />
     </main>
@@ -112,13 +117,16 @@ import ProvidersView from "./views/ProvidersView.vue";
 import PersonasView from "./views/PersonasView.vue";
 import ChatView from "./views/ChatView.vue";
 import {
+  deleteSession,
   loadGraph,
   loadNodeCatalog,
   loadPersonas,
   loadProviders,
+  loadSessions,
   saveGraph,
   savePersonas,
   saveProviders,
+  saveSessions,
   sendChatMessage,
   apiUrl,
 } from "./api.js";
@@ -158,6 +166,8 @@ export default defineComponent({
     const messagesEl = ref(null);
     const messageInput = ref("");
     const messages = ref([]);
+    const sessions = ref([{id: "default", title: "Default", contexts: []}]);
+    const activeSessionId = ref("default");
     const connectionDrag = ref(null);
     const edgeLayoutTick = ref(0);
     const dragState = ref(null);
@@ -326,6 +336,8 @@ export default defineComponent({
         edges: graph.edges,
         providers: providers.value,
         personas: personas.value,
+        sessions: sessions.value,
+        active_session_id: activeSessionId.value,
       };
     }
 
@@ -351,6 +363,75 @@ export default defineComponent({
       graph.edges = config.edges || [];
       selectedId.value = graph.nodes[0]?.id ?? null;
       nextTick(refreshEdgeLayout);
+    }
+
+    function restoreSessions(payload, syncMessages = true) {
+      sessions.value = payload.sessions?.length ? payload.sessions : [{id: "default", title: "Default", contexts: []}];
+      activeSessionId.value = payload.active_session_id || sessions.value[0].id;
+      if (!sessions.value.some((session) => session.id === activeSessionId.value)) {
+        activeSessionId.value = sessions.value[0].id;
+      }
+      if (syncMessages) {
+        syncMessagesFromActiveSession();
+      }
+    }
+
+    function activeSession() {
+      return sessions.value.find((session) => session.id === activeSessionId.value) || sessions.value[0];
+    }
+
+    function syncMessagesFromActiveSession() {
+      const session = activeSession();
+      messages.value = (session?.contexts || []).map((item) => ({
+        role: item.role,
+        text: item.content,
+        trace: [],
+      }));
+      nextTick(() => {
+        if (messagesEl.value) {
+          messagesEl.value.scrollTop = messagesEl.value.scrollHeight;
+        }
+      });
+    }
+
+    async function persistSessions() {
+      await saveSessions({active_session_id: activeSessionId.value, sessions: sessions.value});
+    }
+
+    function nextSessionId() {
+      let index = sessions.value.length + 1;
+      let id = `session_${index}`;
+      while (sessions.value.some((session) => session.id === id)) {
+        index += 1;
+        id = `session_${index}`;
+      }
+      return id;
+    }
+
+    async function selectSession(sessionId) {
+      activeSessionId.value = sessionId;
+      syncMessagesFromActiveSession();
+      await persistSessions();
+    }
+
+    async function handleNewSession() {
+      const id = nextSessionId();
+      sessions.value.push({id, title: `Session ${sessions.value.length + 1}`, contexts: []});
+      activeSessionId.value = id;
+      syncMessagesFromActiveSession();
+      await persistSessions();
+    }
+
+    async function handleDeleteSession() {
+      if (sessions.value.length <= 1) {
+        return;
+      }
+      const deletedId = activeSessionId.value;
+      sessions.value = sessions.value.filter((session) => session.id !== deletedId);
+      activeSessionId.value = sessions.value[0].id;
+      syncMessagesFromActiveSession();
+      await deleteSession(deletedId);
+      await persistSessions();
     }
 
     async function handleSaveGraph() {
@@ -745,10 +826,11 @@ export default defineComponent({
       messageInput.value = "";
       appendMessage("user", message);
       try {
-        const payload = await sendChatMessage(message);
+        const payload = await sendChatMessage(message, activeSessionId.value);
         for (const reply of payload.replies || [payload.reply]) {
           appendMessage("assistant", reply, payload.trace);
         }
+        restoreSessions(await loadSessions(), false);
       } catch (error) {
         appendMessage("assistant", `Request failed: ${error.message}`);
       }
@@ -762,6 +844,7 @@ export default defineComponent({
         restoreGraph(savedGraph);
         providers.value = savedGraph.providers || await loadProviders();
         personas.value = savedGraph.personas || await loadPersonas();
+        restoreSessions(await loadSessions());
       } catch (error) {
         setStatus(error.message, "error");
       }
@@ -775,6 +858,7 @@ export default defineComponent({
 
     return {
       activeView,
+      activeSessionId,
       addNode,
       apiUrl,
       canvasEl,
@@ -791,6 +875,8 @@ export default defineComponent({
       handleCanvasPointerUp,
       handleCanvasDrop,
       handleChatSubmit,
+      handleDeleteSession,
+      handleNewSession,
       handlePersonaSubmit,
       handleProviderSubmit,
       handleSaveGraph,
@@ -819,6 +905,7 @@ export default defineComponent({
       resetGraph,
       resultRailCollapsed,
       selectNode,
+      selectSession,
       selectedId,
       selectedInputType,
       selectedOutputType,
@@ -831,6 +918,7 @@ export default defineComponent({
       startDrag,
       statusMessage,
       statusType,
+      sessions,
       toggleResultPanel,
       updateProperty,
       views,

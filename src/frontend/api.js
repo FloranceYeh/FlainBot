@@ -40,6 +40,10 @@ export function loadPersonas() {
   return fetchJson("/api/personas", "Could not load personas");
 }
 
+export function loadSessions() {
+  return fetchJson("/api/sessions", "Could not load sessions");
+}
+
 export async function postJson(path, payload, errorPrefix) {
   let response;
   try {
@@ -65,10 +69,27 @@ export function savePersonas(personas) {
   return postJson("/api/personas", personas, "persona save failed");
 }
 
+export function saveSessions(payload) {
+  return postJson("/api/sessions", payload, "session save failed");
+}
+
 export function saveGraph(graphConfig) {
   return postJson("/api/graph", graphConfig, "save failed");
 }
 
-export function sendChatMessage(message) {
-  return postJson("/api/chat", {message}, "chat failed");
+export async function deleteSession(sessionId) {
+  let response;
+  try {
+    response = await fetch(apiUrl(`/api/sessions/${encodeURIComponent(sessionId)}`), {method: "DELETE"});
+  } catch (error) {
+    throw new Error("Could not reach FlainBot server. Start it with: python start.py");
+  }
+  if (!response.ok) {
+    throw new Error(`session delete failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export function sendChatMessage(message, sessionId) {
+  return postJson("/api/chat", {message, session_id: sessionId}, "chat failed");
 }

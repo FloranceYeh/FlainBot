@@ -15,6 +15,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts import web_chat
 
 
+EMPTY_SESSIONS = {
+    "sessions": [{"id": "default", "title": "Default", "contexts": []}],
+    "active_session_id": "default",
+}
+
+
 class WebChatTests(unittest.TestCase):
     def test_save_and_load_active_graph_config(self):
         store = web_chat.GraphConfigStore()
@@ -22,7 +28,7 @@ class WebChatTests(unittest.TestCase):
 
         store.save(config)
 
-        self.assertEqual(store.load(), config)
+        self.assertEqual(store.load(), {**config, "providers": [], "personas": [], **EMPTY_SESSIONS})
 
     def test_graph_config_store_persists_config_to_local_file(self):
         config = {
@@ -39,7 +45,7 @@ class WebChatTests(unittest.TestCase):
             store.save(config)
             reloaded = web_chat.GraphConfigStore(data_file=data_file)
 
-        self.assertEqual(reloaded.load(), config)
+        self.assertEqual(reloaded.load(), {**config, **EMPTY_SESSIONS})
 
     def test_graph_config_store_persists_provider_and_persona_updates(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -54,6 +60,21 @@ class WebChatTests(unittest.TestCase):
         self.assertEqual(reloaded.load()["nodes"], [{"id": "n", "type": "chat_input", "props": {}}])
         self.assertEqual(reloaded.load_providers(), [{"id": "provider"}])
         self.assertEqual(reloaded.load_personas(), [{"persona_id": "persona"}])
+
+    def test_graph_config_store_migrates_legacy_session_contexts_to_default_session(self):
+        store = web_chat.GraphConfigStore(
+            initial_config={
+                "nodes": [],
+                "edges": [],
+                "session_contexts": [{"role": "user", "content": "legacy"}],
+            }
+        )
+
+        self.assertEqual(store.load()["active_session_id"], "default")
+        self.assertEqual(
+            store.load_sessions(),
+            [{"id": "default", "title": "Default", "contexts": [{"role": "user", "content": "legacy"}]}],
+        )
 
     def test_run_chat_uses_active_graph_config(self):
         store = web_chat.GraphConfigStore()
@@ -157,7 +178,7 @@ class WebChatTests(unittest.TestCase):
             ["chat_input_1", "chat_output_1", "chat_output_2", "echo_1"],
         )
 
-    def test_run_chat_maintains_session_context_between_turns(self):
+    def test_run_chat_maintains_multiple_session_contexts_between_turns(self):
         requests = []
 
         def fake_transport(url, headers, body):
@@ -210,29 +231,84 @@ class WebChatTests(unittest.TestCase):
             }
         )
 
-        first = web_chat.run_chat("hello", store, transports={"openai_chat": fake_transport})
-        second = web_chat.run_chat("again", store, transports={"openai_chat": fake_transport})
+        first = web_chat.run_chat("hello", store, session_id="default", transports={"openai_chat": fake_transport})
+        alt = web_chat.run_chat("alt", store, session_id="alt", transports={"openai_chat": fake_transport})
+        second = web_chat.run_chat("again", store, session_id="default", transports={"openai_chat": fake_transport})
 
         self.assertEqual(first["reply"], "reply 1")
-        self.assertEqual(second["reply"], "reply 2")
+        self.assertEqual(alt["reply"], "reply 2")
+        self.assertEqual(second["reply"], "reply 3")
         self.assertEqual(requests[0]["messages"], [{"role": "user", "content": "hello"}])
+        self.assertEqual(requests[1]["messages"], [{"role": "user", "content": "alt"}])
         self.assertEqual(
-            requests[1]["messages"],
+            requests[2]["messages"],
             [
                 {"role": "user", "content": "hello"},
                 {"role": "assistant", "content": "reply 1"},
                 {"role": "user", "content": "again"},
             ],
         )
+        sessions = {session["id"]: session for session in store.load_sessions()}
         self.assertEqual(
-            store.load()["session_contexts"],
+            sessions["default"]["contexts"],
             [
                 {"role": "user", "content": "hello"},
                 {"role": "assistant", "content": "reply 1"},
                 {"role": "user", "content": "again"},
+                {"role": "assistant", "content": "reply 3"},
+            ],
+        )
+        self.assertEqual(
+            sessions["alt"]["contexts"],
+            [
+                {"role": "user", "content": "alt"},
                 {"role": "assistant", "content": "reply 2"},
             ],
         )
+
+    def test_session_api_saves_loads_and_deletes_sessions(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            sessions = [
+                {"id": "default", "title": "Default", "contexts": []},
+                {"id": "work", "title": "Work", "contexts": [{"role": "user", "content": "hi"}]},
+            ]
+            body = json.dumps({"active_session_id": "work", "sessions": sessions}).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/sessions",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/sessions", timeout=5) as response:
+                self.assertEqual(
+                    json.loads(response.read().decode("utf-8")),
+                    {"active_session_id": "work", "sessions": sessions},
+                )
+
+            delete_req = request.Request(f"{base_url}/api/sessions/work", method="DELETE")
+            with request.urlopen(delete_req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/sessions", timeout=5) as response:
+                self.assertEqual(
+                    json.loads(response.read().decode("utf-8")),
+                    {
+                        "active_session_id": "default",
+                        "sessions": [{"id": "default", "title": "Default", "contexts": []}],
+                    },
+                )
+        finally:
+            server.shutdown()
+            server.server_close()
 
     def test_graph_api_saves_and_loads_config(self):
         store = web_chat.GraphConfigStore()
@@ -254,7 +330,7 @@ class WebChatTests(unittest.TestCase):
                 self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
 
             with request.urlopen(f"{base_url}/api/graph", timeout=5) as response:
-                self.assertEqual(json.loads(response.read().decode("utf-8")), config)
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {**config, "providers": [], "personas": [], **EMPTY_SESSIONS})
         finally:
             server.shutdown()
             server.server_close()
@@ -547,7 +623,7 @@ class WebChatTests(unittest.TestCase):
         handler = captured["handler"]
         self.assertEqual(result, 0)
         self.assertEqual(captured["address"], ("127.0.0.1", 8765))
-        self.assertEqual(handler.store.load(), {"nodes": [], "edges": [], "providers": [], "personas": []})
+        self.assertEqual(handler.store.load(), {"nodes": [], "edges": [], "providers": [], "personas": [], **EMPTY_SESSIONS})
         self.assertIn("http://127.0.0.1:8765/", stdout.getvalue())
 
 
