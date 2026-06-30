@@ -160,9 +160,31 @@ function flattenNodeCatalog(packages) {
   ));
 }
 
+function portName(port) {
+  return typeof port === "string" ? port : port.name;
+}
+
+function portType(port) {
+  return typeof port === "string" ? "any" : port.type;
+}
+
+function portsText(ports) {
+  return ports.map((port) => `${portName(port)} ${portType(port)}`).join(" ");
+}
+
 function catalogText(item) {
   if (item.kind === "node") {
-    return `${item.type} ${item.className} ${item.title} ${item.description} ${item.package}`.toLowerCase();
+    return [
+      item.type,
+      item.className,
+      item.title,
+      item.description,
+      item.package,
+      item.packageId,
+      item.packageTitle,
+      portsText(item.inputs || []),
+      portsText(item.outputs || []),
+    ].join(" ").toLowerCase();
   }
   return `${item.id} ${item.title} ${item.description || ""}`.toLowerCase();
 }
@@ -301,15 +323,18 @@ function renderPorts(node, direction) {
     return '<span class="node-type">none</span>';
   }
   return ports.map((port) => {
+    const name = portName(port);
+    const type = portType(port);
     return `
       <button
         type="button"
         class="port ${direction}"
         data-node-id="${node.id}"
-        data-port="${port}"
+        data-port="${name}"
+        data-port-type="${type}"
         data-direction="${direction}"
         data-compatible="false"
-      >${port}</button>
+      ><span>${name}</span><span class="port-type">${type}</span></button>
     `;
   }).join("");
 }

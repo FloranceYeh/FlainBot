@@ -493,6 +493,17 @@ main {
   box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.14);
 }
 
+.port-type {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.port.output .port-type {
+  margin-left: 0;
+  margin-right: auto;
+}
+
 .node-properties {
   display: grid;
   gap: 8px;

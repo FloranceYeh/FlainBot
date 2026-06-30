@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 
+def port(name: str, type_: str) -> dict[str, str]:
+    return {"name": name, "type": type_}
+
+
 def builtin_node_catalog() -> list[dict]:
     return [
         {
@@ -27,7 +31,7 @@ def builtin_node_catalog() -> list[dict]:
                                     "title": "Web Chat Input",
                                     "description": "Reads the user's message from the web chat input.",
                                     "inputs": [],
-                                    "outputs": ["text"],
+                                    "outputs": [port("text", "text")],
                                     "defaults": {},
                                 },
                                 {
@@ -37,8 +41,8 @@ def builtin_node_catalog() -> list[dict]:
                                     "className": "ChatOutputNode",
                                     "title": "Web Chat Output",
                                     "description": "Sends model text to the web chat message list.",
-                                    "inputs": ["text"],
-                                    "outputs": ["reply"],
+                                    "inputs": [port("text", "text")],
+                                    "outputs": [port("reply", "text")],
                                     "defaults": {},
                                 },
                             ],
@@ -62,8 +66,13 @@ def builtin_node_catalog() -> list[dict]:
                                     "className": "PromptBuilderNode",
                                     "title": "Prompt Builder",
                                     "description": "Assembles system, user, tools, and context into a JSON prompt payload.",
-                                    "inputs": ["system", "user", "tools", "context"],
-                                    "outputs": ["json"],
+                                    "inputs": [
+                                        port("system", "text"),
+                                        port("user", "text"),
+                                        port("tools", "json"),
+                                        port("context", "json"),
+                                    ],
+                                    "outputs": [port("json", "json")],
                                     "defaults": {
                                         "system_prompt": "",
                                         "user_prompt": "",
@@ -85,8 +94,12 @@ def builtin_node_catalog() -> list[dict]:
                                     "className": "ProviderCallNode",
                                     "title": "Call Provider",
                                     "description": "Consumes text and calls a configured provider.",
-                                    "inputs": ["text"],
-                                    "outputs": ["text", "request", "response"],
+                                    "inputs": [port("text", "text")],
+                                    "outputs": [
+                                        port("text", "text"),
+                                        port("request", "json"),
+                                        port("response", "json"),
+                                    ],
                                     "defaults": {
                                         "provider_id": "",
                                     },

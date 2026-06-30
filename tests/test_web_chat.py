@@ -193,8 +193,23 @@ class WebChatTests(unittest.TestCase):
             self.assertIn("PromptBuilderNode", class_names)
             self.assertIn("ProviderCallNode", class_names)
             self.assertTrue(all(node["package"] == "core" for node in nodes))
+            def port_names(ports):
+                return [port["name"] for port in ports]
+
+            def port_types(ports):
+                return [port["type"] for port in ports]
+
+            self.assertTrue(
+                all(
+                    isinstance(port, dict) and {"name", "type"} <= set(port)
+                    for node in nodes
+                    for port in node["inputs"] + node["outputs"]
+                )
+            )
             prompt_builder = next(node for node in nodes if node["type"] == "prompt_builder")
-            self.assertEqual(prompt_builder["outputs"], ["json"])
+            self.assertEqual(port_names(prompt_builder["outputs"]), ["json"])
+            self.assertEqual(port_types(prompt_builder["outputs"]), ["json"])
+            self.assertEqual(port_types(prompt_builder["inputs"]), ["text", "text", "json", "json"])
             self.assertIn("system_prompt", prompt_builder["defaults"])
             self.assertIn("user_prompt", prompt_builder["defaults"])
             self.assertIn("tools_json", prompt_builder["defaults"])
