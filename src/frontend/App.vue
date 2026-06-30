@@ -107,24 +107,6 @@
                   points="-6 -4, 6 0, -6 4"
                   :transform="`translate(${edge.arrow.x} ${edge.arrow.y}) rotate(${edge.arrow.angle})`"
                 ></polygon>
-                <circle
-                  v-for="edge in renderedEdges"
-                  :key="`${edge.key}:from`"
-                  class="edge-handle edge-handle-from"
-                  :cx="edge.from.x"
-                  :cy="edge.from.y"
-                  r="6"
-                  @pointerdown.stop="startEdgeEndpointDrag($event, edge.index, 'from')"
-                ></circle>
-                <circle
-                  v-for="edge in renderedEdges"
-                  :key="`${edge.key}:to`"
-                  class="edge-handle edge-handle-to"
-                  :cx="edge.to.x"
-                  :cy="edge.to.y"
-                  r="6"
-                  @pointerdown.stop="startEdgeEndpointDrag($event, edge.index, 'to')"
-                ></circle>
                 <path
                   v-if="previewConnectionPath"
                   class="preview-connection"
@@ -622,6 +604,14 @@ export default defineComponent({
       refreshEdgeLayout();
     }
 
+    function connectedEdgeForPort(nodeId, port, direction) {
+      return graph.edges.findIndex((edge) => (
+        direction === "output"
+          ? edge.from_node === nodeId && edge.from_port === port
+          : edge.to_node === nodeId && edge.to_port === port
+      ));
+    }
+
     function updateProperty(id, key, value) {
       const node = graph.nodes.find((item) => item.id === id);
       if (node) {
@@ -870,6 +860,10 @@ export default defineComponent({
       const port = event.currentTarget;
       event.preventDefault();
       event.stopPropagation();
+      const edgeIndex = connectedEdgeForPort(port.dataset.nodeId, port.dataset.port, port.dataset.direction);
+      if (edgeIndex !== -1) {
+        removeEdgeAt(edgeIndex);
+      }
       connectionDrag.value = {
         nodeId: port.dataset.nodeId,
         port: port.dataset.port,
@@ -879,28 +873,6 @@ export default defineComponent({
       };
       bindConnectionDragEvents();
       port.setPointerCapture(event.pointerId);
-    }
-
-    function startEdgeEndpointDrag(event, edgeIndex, endpoint) {
-      const edge = graph.edges[edgeIndex];
-      if (!edge) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      const fixed = endpoint === "to"
-        ? {nodeId: edge.from_node, port: edge.from_port, direction: "output"}
-        : {nodeId: edge.to_node, port: edge.to_port, direction: "input"};
-      connectionDrag.value = {
-        nodeId: fixed.nodeId,
-        port: fixed.port,
-        direction: fixed.direction,
-        start: anchorForPort(fixed.nodeId, fixed.port, fixed.direction),
-        current: canvasPointFromEvent(event),
-      };
-      removeEdgeAt(edgeIndex);
-      bindConnectionDragEvents();
-      event.currentTarget.setPointerCapture(event.pointerId);
     }
 
     function bindConnectionDragEvents() {
@@ -1090,7 +1062,6 @@ export default defineComponent({
       showNodePreview,
       startCanvasPan,
       startConnectionDrag,
-      startEdgeEndpointDrag,
       startDrag,
       statusMessage,
       statusType,

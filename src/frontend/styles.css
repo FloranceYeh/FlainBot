@@ -472,7 +472,7 @@ main {
 }
 
 .node-layer {
-  z-index: 1;
+  z-index: 2;
 }
 
 .edge-layer {
@@ -480,7 +480,7 @@ main {
   height: 100%;
   pointer-events: none;
   overflow: visible;
-  z-index: 2;
+  z-index: 1;
 }
 
 .edge-layer path {
@@ -497,14 +497,6 @@ main {
 .edge-layer .edge-arrow {
   fill: var(--accent);
   pointer-events: none;
-}
-
-.edge-layer .edge-handle {
-  fill: #ffffff;
-  stroke: var(--accent);
-  stroke-width: 2;
-  cursor: grab;
-  pointer-events: all;
 }
 
 .graph-node {
