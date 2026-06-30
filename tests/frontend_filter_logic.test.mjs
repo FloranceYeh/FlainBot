@@ -1,8 +1,10 @@
 import {
+  connectionPath,
   filterNodeCatalog,
   filterOptions,
   flattenNodeCatalog,
   generatePython,
+  portAnchor,
 } from "../src/frontend/graph.js";
 
 const catalog = [
@@ -117,4 +119,23 @@ const externalPython = generatePython(
 
 if (!externalPython.includes("meow_before_punctuation") || externalPython.includes("ChatOutputNode()")) {
   throw new Error("generated python should preserve external node types");
+}
+
+const pathWithMidpoint = connectionPath({x: 10, y: 20}, {x: 210, y: 120});
+if (!pathWithMidpoint.includes(" 110 70 C ")) {
+  throw new Error("connection path should include a midpoint vertex for centered arrows");
+}
+
+const outputAnchor = portAnchor(
+  {x: 30, y: 40, inputs: [], outputs: [{name: "reply", type: "text"}]},
+  "reply",
+  "output",
+);
+const movedOutputAnchor = portAnchor(
+  {x: 70, y: 90, inputs: [], outputs: [{name: "reply", type: "text"}]},
+  "reply",
+  "output",
+);
+if (movedOutputAnchor.x - outputAnchor.x !== 40 || movedOutputAnchor.y - outputAnchor.y !== 50) {
+  throw new Error("port anchors should move with node coordinates");
 }

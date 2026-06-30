@@ -96,7 +96,7 @@
             <div id="canvas-space" class="canvas-space" data-canvas-space :style="canvasSpaceStyle">
               <svg id="edge-layer" class="edge-layer">
                 <defs>
-                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
                     <polygon points="0 0, 10 3.5, 0 7"></polygon>
                   </marker>
                 </defs>
@@ -104,8 +104,26 @@
                   v-for="edge in renderedEdges"
                   :key="edge.key"
                   :d="edge.d"
-                  marker-end="url(#arrowhead)"
+                  marker-mid="url(#arrowhead)"
                 ></path>
+                <circle
+                  v-for="edge in renderedEdges"
+                  :key="`${edge.key}:from`"
+                  class="edge-handle edge-handle-from"
+                  :cx="edge.from.x"
+                  :cy="edge.from.y"
+                  r="6"
+                  @pointerdown.stop="startEdgeEndpointDrag($event, edge.index, 'from')"
+                ></circle>
+                <circle
+                  v-for="edge in renderedEdges"
+                  :key="`${edge.key}:to`"
+                  class="edge-handle edge-handle-to"
+                  :cx="edge.to.x"
+                  :cy="edge.to.y"
+                  r="6"
+                  @pointerdown.stop="startEdgeEndpointDrag($event, edge.index, 'to')"
+                ></circle>
                 <path
                   v-if="previewConnectionPath"
                   class="preview-connection"
@@ -364,6 +382,7 @@ import {
   flattenNodeCatalog,
   generatePython,
   parseJsonOrEmpty,
+  portAnchor,
   portName,
   portType,
 } from "./graph.js";
@@ -396,7 +415,7 @@ const PortList = defineComponent({
       :data-port-type="portType(port)"
       :data-direction="direction"
       :data-compatible="connectionDrag && node.id !== connectionDrag.nodeId && direction !== connectionDrag.direction ? 'true' : 'false'"
-      @pointerdown="$emit('start-connection', $event)"
+      @pointerdown.stop="$emit('start-connection', $event)"
     ><span>{{ portName(port) }}</span><span class="port-type">{{ portType(port) }}</span></button>
   `,
 });
@@ -533,11 +552,16 @@ export default defineComponent({
       const to = connectionDrag.value.direction === "output" ? connectionDrag.value.current : connectionDrag.value.start;
       return connectionPath(from, to);
     });
-    const renderedEdges = computed(() => graph.edges.map((edge) => {
-      const from = portCenter(edge.from_node, edge.from_port, "output");
-      const to = portCenter(edge.to_node, edge.to_port, "input");
-      return {key: `${edge.from_node}:${edge.from_port}->${edge.to_node}:${edge.to_port}`, d: connectionPath(from, to)};
-    }).filter((edge) => edge.d));
+    const renderedEdges = computed(() => graph.edges.map((edge, index) => {
+      const fromNode = findNode(edge.from_node);
+      const toNode = findNode(edge.to_node);
+      if (!fromNode || !toNode) {
+        return null;
+      }
+      const from = portAnchor(fromNode, edge.from_port, "output");
+      const to = portAnchor(toNode, edge.to_port, "input");
+      return {key: edgeKey(edge, index), index, from, to, d: connectionPath(from, to)};
+    }).filter(Boolean));
 
     function setStatus(message, type = "") {
       statusMessage.value = message;
@@ -547,6 +571,14 @@ export default defineComponent({
     function nextId(type) {
       const count = graph.nodes.filter((node) => node.type === type).length + 1;
       return `${type}_${count}`;
+    }
+
+    function findNode(id) {
+      return graph.nodes.find((item) => item.id === id);
+    }
+
+    function edgeKey(edge, index) {
+      return `${edge.from_node}:${edge.from_port}->${edge.to_node}:${edge.to_port}:${index}`;
     }
 
     function addNode(type) {
@@ -578,6 +610,10 @@ export default defineComponent({
       if (selectedId.value === id) {
         selectedId.value = graph.nodes[0]?.id ?? null;
       }
+    }
+
+    function removeEdgeAt(index) {
+      graph.edges = graph.edges.filter((edge, edgeIndex) => edgeIndex !== index);
     }
 
     function updateProperty(id, key, value) {
@@ -727,6 +763,11 @@ export default defineComponent({
       };
     }
 
+    function anchorForPort(nodeId, port, direction) {
+      const node = findNode(nodeId);
+      return node ? portAnchor(node, port, direction) : portCenter(nodeId, port, direction);
+    }
+
     function canvasPointFromEvent(event) {
       const canvasRect = canvasEl.value.getBoundingClientRect();
       return {
@@ -799,6 +840,23 @@ export default defineComponent({
       return port.dataset.nodeId !== connectionDrag.value.nodeId && port.dataset.direction !== connectionDrag.value.direction;
     }
 
+    function closestCompatiblePort(event) {
+      const ports = [...document.querySelectorAll(".port")];
+      const hitPadding = 18;
+      return ports.find((port) => {
+        if (!isCompatiblePort(port)) {
+          return false;
+        }
+        const rect = port.getBoundingClientRect();
+        return (
+          event.clientX >= rect.left - hitPadding
+          && event.clientX <= rect.right + hitPadding
+          && event.clientY >= rect.top - hitPadding
+          && event.clientY <= rect.bottom + hitPadding
+        );
+      }) || null;
+    }
+
     function startConnectionDrag(event) {
       const port = event.currentTarget;
       event.preventDefault();
@@ -807,10 +865,54 @@ export default defineComponent({
         nodeId: port.dataset.nodeId,
         port: port.dataset.port,
         direction: port.dataset.direction,
-        start: portCenter(port.dataset.nodeId, port.dataset.port, port.dataset.direction),
+        start: anchorForPort(port.dataset.nodeId, port.dataset.port, port.dataset.direction),
         current: canvasPointFromEvent(event),
       };
+      bindConnectionDragEvents();
       port.setPointerCapture(event.pointerId);
+    }
+
+    function startEdgeEndpointDrag(event, edgeIndex, endpoint) {
+      const edge = graph.edges[edgeIndex];
+      if (!edge) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const fixed = endpoint === "to"
+        ? {nodeId: edge.from_node, port: edge.from_port, direction: "output"}
+        : {nodeId: edge.to_node, port: edge.to_port, direction: "input"};
+      connectionDrag.value = {
+        nodeId: fixed.nodeId,
+        port: fixed.port,
+        direction: fixed.direction,
+        start: anchorForPort(fixed.nodeId, fixed.port, fixed.direction),
+        current: canvasPointFromEvent(event),
+      };
+      removeEdgeAt(edgeIndex);
+      bindConnectionDragEvents();
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    function bindConnectionDragEvents() {
+      unbindConnectionDragEvents();
+      window.addEventListener("pointermove", handleWindowConnectionPointerMove);
+      window.addEventListener("pointerup", handleWindowConnectionPointerUp);
+      window.addEventListener("pointercancel", handleWindowConnectionPointerUp);
+    }
+
+    function unbindConnectionDragEvents() {
+      window.removeEventListener("pointermove", handleWindowConnectionPointerMove);
+      window.removeEventListener("pointerup", handleWindowConnectionPointerUp);
+      window.removeEventListener("pointercancel", handleWindowConnectionPointerUp);
+    }
+
+    function handleWindowConnectionPointerMove(event) {
+      moveConnectionDrag(event);
+    }
+
+    function handleWindowConnectionPointerUp(event) {
+      finishConnectionDrag(event);
     }
 
     function moveConnectionDrag(event) {
@@ -821,9 +923,10 @@ export default defineComponent({
 
     function finishConnectionDrag(event) {
       if (!connectionDrag.value) {
+        unbindConnectionDragEvents();
         return;
       }
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".port");
+      const target = closestCompatiblePort(event);
       if (isCompatiblePort(target)) {
         const from = connectionDrag.value.direction === "output" ? connectionDrag.value : target.dataset;
         const to = connectionDrag.value.direction === "output" ? target.dataset : connectionDrag.value;
@@ -832,6 +935,7 @@ export default defineComponent({
         }
       }
       connectionDrag.value = null;
+      unbindConnectionDragEvents();
     }
 
     function handleCanvasPointerMove(event) {
@@ -966,6 +1070,7 @@ export default defineComponent({
       renderedEdges,
       resetGraph,
       resultRailCollapsed,
+      selectNode,
       selectedId,
       selectedInputType,
       selectedOutputType,
@@ -975,6 +1080,7 @@ export default defineComponent({
       showNodePreview,
       startCanvasPan,
       startConnectionDrag,
+      startEdgeEndpointDrag,
       startDrag,
       statusMessage,
       statusType,

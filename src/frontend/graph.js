@@ -14,6 +14,21 @@ export function portsText(ports) {
   return ports.map((port) => `${portName(port)} ${portType(port)}`).join(" ");
 }
 
+export const NODE_WIDTH = 270;
+export const NODE_INPUT_X = 16;
+export const NODE_OUTPUT_X = NODE_WIDTH - 16;
+export const NODE_PORT_TOP = 113;
+export const NODE_PORT_GAP = 34;
+
+export function portAnchor(node, targetPort, direction) {
+  const ports = direction === "input" ? node.inputs || [] : node.outputs || [];
+  const index = Math.max(0, ports.findIndex((port) => portName(port) === targetPort));
+  return {
+    x: node.x + (direction === "input" ? NODE_INPUT_X : NODE_OUTPUT_X),
+    y: node.y + NODE_PORT_TOP + index * NODE_PORT_GAP,
+  };
+}
+
 export function collectCatalogNodes(items, packageInfo = {}) {
   return items.flatMap((item) => {
     if (item.kind === "node") {
@@ -114,7 +129,11 @@ export function filterNodeCatalog(nodeCatalog, query, filters) {
 
 export function connectionPath(from, to) {
   const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
-  return `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
+  const midpoint = {
+    x: (from.x + to.x) / 2,
+    y: (from.y + to.y) / 2,
+  };
+  return `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${midpoint.x - curve / 2} ${midpoint.y}, ${midpoint.x} ${midpoint.y} C ${midpoint.x + curve / 2} ${midpoint.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
 }
 
 export function quote(value) {
