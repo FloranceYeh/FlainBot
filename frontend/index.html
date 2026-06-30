@@ -7,65 +7,73 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <h1>FlainBot</h1>
-        <p>Plan a graph and test it in the web chat from one workspace.</p>
-      </div>
-      <div class="topbar-actions">
-        <button class="view-tab" data-route="planner" type="button">Planner</button>
-        <button class="view-tab" data-route="chat" type="button">Chat</button>
-        <button id="save-graph" type="button">Save for Web Chat</button>
-        <button id="reset-graph" type="button">Reset</button>
-      </div>
-    </header>
-
-    <main>
-      <section id="planner-view" class="workspace view" data-view="planner">
-        <section class="panel node-library" aria-labelledby="library-title">
-          <h2 id="library-title">Node Library</h2>
-          <div id="node-library" class="node-list"></div>
-        </section>
-
-        <section class="panel graph-panel" aria-labelledby="graph-title">
-          <div class="section-header">
-            <h2 id="graph-title">FlainBot Node Planner</h2>
-            <span id="graph-count" class="count">0 nodes</span>
-          </div>
+    <div class="app-shell">
+      <header class="workbench-topbar">
+        <div class="brand">
+          <h1>FlainBot</h1>
           <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
-          <div id="graph-canvas" class="graph-canvas">
-            <svg id="edge-layer" class="edge-layer">
-              <defs>
-                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                  <polygon points="0 0, 10 3.5, 0 7"></polygon>
-                </marker>
-              </defs>
-            </svg>
-            <div id="node-layer" class="node-layer"></div>
-          </div>
+        </div>
+        <nav class="topbar-tabs" aria-label="Views">
+          <button class="view-tab" data-route="planner" type="button">Planner</button>
+          <button class="view-tab" data-route="chat" type="button">Chat</button>
+        </nav>
+        <div class="topbar-actions">
+          <button id="save-graph" type="button">Save</button>
+          <button id="reset-graph" type="button">Reset</button>
+        </div>
+      </header>
+
+      <main>
+        <section id="planner-view" class="planner-workbench view" data-view="planner">
+          <aside class="node-shelf" aria-labelledby="library-title">
+            <div class="shelf-header">
+              <h2 id="library-title">Nodes</h2>
+              <input id="node-search" type="search" autocomplete="off" placeholder="Search nodes">
+            </div>
+            <div id="node-library" class="node-list"></div>
+          </aside>
+
+          <section class="canvas-panel" aria-labelledby="graph-title">
+            <div class="canvas-toolbar">
+              <h2 id="graph-title">FlainBot Node Planner</h2>
+              <span id="graph-count" class="count">0 nodes</span>
+            </div>
+            <div id="graph-canvas" class="graph-canvas">
+              <svg id="edge-layer" class="edge-layer">
+                <defs>
+                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7"></polygon>
+                  </marker>
+                </defs>
+              </svg>
+              <div id="node-layer" class="node-layer"></div>
+            </div>
+          </section>
+
+          <aside id="result-panel" class="result-rail" aria-label="Results">
+            <details id="python-panel" class="result-section">
+              <summary>Generated Python</summary>
+              <div class="result-actions">
+                <button id="copy-code" type="button">Copy</button>
+              </div>
+              <pre><code id="python-code"></code></pre>
+            </details>
+          </aside>
         </section>
 
-        <section class="panel code-panel" aria-labelledby="code-title">
-          <div class="section-header">
-            <h2 id="code-title">Generated Python</h2>
-            <button id="copy-code" type="button">Copy</button>
-          </div>
-          <pre><code id="python-code"></code></pre>
+        <section id="chat-view" class="view chat-shell" data-view="chat" hidden>
+          <header class="chat-header">
+            <h2>FlainBot Chat</h2>
+            <p>Graph runtime: input node to model node to output node.</p>
+          </header>
+          <section id="messages" class="messages" aria-live="polite"></section>
+          <form id="chat-form" class="composer">
+            <input id="message-input" name="message" autocomplete="off" placeholder="Type a message">
+            <button type="submit">Send</button>
+          </form>
         </section>
-      </section>
-
-      <section id="chat-view" class="view chat-shell" data-view="chat" hidden>
-        <header class="chat-header">
-          <h2>FlainBot Chat</h2>
-          <p>Graph runtime: input node to model node to output node.</p>
-        </header>
-        <section id="messages" class="messages" aria-live="polite"></section>
-        <form id="chat-form" class="composer">
-          <input id="message-input" name="message" autocomplete="off" placeholder="Type a message">
-          <button type="submit">Send</button>
-        </form>
-      </section>
-    </main>
+      </main>
+    </div>
 
     <script src="app.js"></script>
   </body>
