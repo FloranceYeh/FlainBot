@@ -62,18 +62,20 @@ OpenAI:
 
 ```powershell
 $env:OPENAI_API_KEY="sk-..."
-python scripts/web_chat.py openai --model gpt-4.1-mini
+python start.py --model gpt-4.1-mini
 ```
 
 Anthropic:
 
 ```powershell
 $env:ANTHROPIC_API_KEY="sk-ant-..."
-python scripts/web_chat.py anthropic --model claude-sonnet-4-5
+python start.py --provider anthropic --model claude-sonnet-4-5
 ```
 
 Then open the printed local URL in a browser.
 Use the Chat tab or `http://127.0.0.1:8765/#chat` to talk to the active graph.
+The cross-platform `start.py` wrapper delegates to `scripts/web_chat.py` and
+accepts `--host`, `--port`, `--model`, and `--base-url`.
 
 ## Real Graph Smoke Test
 
