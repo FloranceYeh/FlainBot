@@ -1,4 +1,4 @@
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import redirect_stdout
 import io
 import os
 from pathlib import Path
@@ -16,9 +16,8 @@ import start
 class StartScriptTests(unittest.TestCase):
     def test_default_arguments_launch_openai_server(self):
         stdout = io.StringIO()
-        env = {"OPENAI_API_KEY": "sk-test"}
 
-        with patch.dict(os.environ, env, clear=True):
+        with patch.dict(os.environ, {}, clear=True):
             with patch("scripts.web_chat.main", return_value=0) as web_chat_main:
                 with redirect_stdout(stdout):
                     result = start.main([])
@@ -63,30 +62,6 @@ class StartScriptTests(unittest.TestCase):
                 "https://example.com/v1",
             ],
         )
-
-    def test_missing_api_key_returns_error_without_launching(self):
-        stderr = io.StringIO()
-
-        with patch.dict(os.environ, {}, clear=True):
-            with patch("scripts.web_chat.main") as web_chat_main:
-                with redirect_stderr(stderr):
-                    result = start.main([])
-
-        self.assertEqual(result, 2)
-        self.assertFalse(web_chat_main.called)
-        self.assertIn("OPENAI_API_KEY", stderr.getvalue())
-
-    def test_anthropic_requires_anthropic_api_key(self):
-        stderr = io.StringIO()
-
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True):
-            with patch("scripts.web_chat.main") as web_chat_main:
-                with redirect_stderr(stderr):
-                    result = start.main(["--provider", "anthropic"])
-
-        self.assertEqual(result, 2)
-        self.assertFalse(web_chat_main.called)
-        self.assertIn("ANTHROPIC_API_KEY", stderr.getvalue())
 
 
 if __name__ == "__main__":

@@ -61,14 +61,12 @@ navigation or open `frontend/index.html#chat`.
 OpenAI:
 
 ```powershell
-$env:OPENAI_API_KEY="sk-..."
 python start.py --model gpt-4.1-mini
 ```
 
 Anthropic:
 
 ```powershell
-$env:ANTHROPIC_API_KEY="sk-ant-..."
 python start.py --provider anthropic --model claude-sonnet-4-5
 ```
 
@@ -76,6 +74,8 @@ Then open the printed local URL in a browser.
 Use the Chat tab or `http://127.0.0.1:8765/#chat` to talk to the active graph.
 The cross-platform `start.py` wrapper delegates to `scripts/web_chat.py` and
 accepts `--host`, `--port`, `--model`, and `--base-url`.
+Startup does not require an API key. Configure provider credentials in the
+Planner node properties and click `Save for Web Chat` before using Chat.
 
 ## Real Graph Smoke Test
 
