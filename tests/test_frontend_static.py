@@ -44,6 +44,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("Could not reach FlainBot server", js)
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn("api_key", js)
+        self.assertIn("<form class=\"node-properties\"", js)
+        self.assertIn("autocomplete=\"off\"", js)
+        self.assertIn("event.preventDefault()", js)
 
     def test_chat_view_is_in_single_index_shell(self):
         html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")

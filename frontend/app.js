@@ -202,6 +202,9 @@ function renderCanvas() {
     item.querySelectorAll("[data-prop-key]").forEach((input) => {
       input.addEventListener("input", (event) => updateProperty(node.id, event.target.dataset.propKey, event.target.value));
     });
+    item.querySelectorAll(".node-properties").forEach((form) => {
+      form.addEventListener("submit", (event) => event.preventDefault());
+    });
     item.addEventListener("pointerdown", () => {
       selectedId = node.id;
       renderSelection();
@@ -238,14 +241,14 @@ function renderProperties(node) {
   }
 
   return `
-    <div class="node-properties">
+    <form class="node-properties" autocomplete="off">
       ${entries.map(([key, value]) => `
         <div class="field">
           <label>${key}</label>
           <input data-prop-key="${key}" value="${value}" ${key === "api_key" ? 'type="password"' : ""}>
         </div>
       `).join("")}
-    </div>
+    </form>
   `;
 }
 
