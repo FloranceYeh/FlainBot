@@ -197,18 +197,40 @@ main {
   padding: 6px 8px;
 }
 
-.node-group {
+.node-package {
   display: grid;
   gap: 8px;
   padding: 12px;
 }
 
-.node-group + .node-group {
+.node-package + .node-package {
   border-top: 1px solid var(--panel-border);
 }
 
-.node-group h3 {
+.node-package h3,
+.node-package p,
+.node-group h4 {
   margin: 0;
+}
+
+.node-package h3 {
+  font-size: 14px;
+}
+
+.node-package p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.node-group {
+  display: grid;
+  gap: 8px;
+  padding-left: 10px;
+  border-left: 1px solid var(--panel-border);
+}
+
+.node-group h4 {
   color: var(--muted);
   font-size: 12px;
   text-transform: uppercase;

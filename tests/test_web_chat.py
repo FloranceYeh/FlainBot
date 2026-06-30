@@ -151,25 +151,55 @@ class WebChatTests(unittest.TestCase):
             with request.urlopen(f"{base_url}/api/nodes", timeout=5) as response:
                 catalog = json.loads(response.read().decode("utf-8"))
 
-            node_types = {node["type"] for node in catalog}
+            self.assertTrue(all(package.get("kind") == "package" for package in catalog))
+            package_ids = {package.get("id") for package in catalog}
+            self.assertIn("core", package_ids)
+
+            def collect_nodes(items):
+                nodes = []
+                for item in items:
+                    if item["kind"] == "node":
+                        nodes.append(item)
+                    elif item["kind"] == "group":
+                        nodes.extend(collect_nodes(item["items"]))
+                return nodes
+
+            def collect_groups(items):
+                groups = []
+                for item in items:
+                    if item["kind"] == "group":
+                        groups.append(item)
+                        groups.extend(collect_groups(item["items"]))
+                return groups
+
+            nodes = []
+            groups = []
+            for package in catalog:
+                nodes.extend(collect_nodes(package.get("items", [])))
+                groups.extend(collect_groups(package.get("items", [])))
+
+            self.assertTrue(any(group["kind"] == "group" for group in groups))
+            self.assertTrue(any(item["kind"] == "group" for group in groups for item in group["items"]))
+            node_types = {node["type"] for node in nodes}
             self.assertIn("chat_input", node_types)
             self.assertIn("chat_output", node_types)
             self.assertIn("prompt_builder", node_types)
             self.assertIn("provider_call", node_types)
             self.assertNotIn("openai", node_types)
             self.assertNotIn("anthropic", node_types)
-            class_names = {node["className"] for node in catalog}
+            class_names = {node["className"] for node in nodes}
             self.assertIn("ChatInputNode", class_names)
             self.assertIn("ChatOutputNode", class_names)
             self.assertIn("PromptBuilderNode", class_names)
             self.assertIn("ProviderCallNode", class_names)
-            prompt_builder = next(node for node in catalog if node["type"] == "prompt_builder")
+            self.assertTrue(all(node["package"] == "core" for node in nodes))
+            prompt_builder = next(node for node in nodes if node["type"] == "prompt_builder")
             self.assertEqual(prompt_builder["outputs"], ["json"])
             self.assertIn("system_prompt", prompt_builder["defaults"])
             self.assertIn("user_prompt", prompt_builder["defaults"])
             self.assertIn("tools_json", prompt_builder["defaults"])
             self.assertIn("context_json", prompt_builder["defaults"])
-            self.assertTrue(all("inputs" in node and "outputs" in node for node in catalog))
+            self.assertTrue(all("inputs" in node and "outputs" in node for node in nodes))
         finally:
             server.shutdown()
             server.server_close()

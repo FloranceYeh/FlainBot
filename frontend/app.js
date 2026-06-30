@@ -1,4 +1,5 @@
 let nodeCatalog = [];
+let flatNodeCatalog = [];
 let graph = {nodes: [], edges: []};
 let providers = [];
 let selectedId = null;
@@ -61,6 +62,7 @@ async function loadNodeCatalog() {
     throw new Error(`Could not load node catalog: ${response.status}`);
   }
   nodeCatalog = await response.json();
+  flatNodeCatalog = flattenNodeCatalog(nodeCatalog);
 }
 
 async function loadProviders() {
@@ -88,7 +90,7 @@ async function saveProviders() {
 }
 
 function addNode(type) {
-  const spec = nodeCatalog.find((node) => node.type === type);
+  const spec = flatNodeCatalog.find((node) => node.type === type);
   if (!spec) {
     setStatus(`Unknown node type: ${type}`, "error");
     return;
@@ -137,47 +139,93 @@ function addEdge(fromNode, fromPort, toNode, toPort) {
   render();
 }
 
-function categoryForNode(node) {
-  if (node.type.includes("input")) {
-    return "Input";
+function collectCatalogNodes(items, packageInfo = {}) {
+  return items.flatMap((item) => {
+    if (item.kind === "node") {
+      return [{...item, packageId: item.package || packageInfo.id, packageTitle: packageInfo.title}];
+    }
+    if (item.kind === "group") {
+      return collectCatalogNodes(item.items || [], packageInfo);
+    }
+    return [];
+  });
+}
+
+function flattenNodeCatalog(packages) {
+  return packages.flatMap((packageItem) => (
+    collectCatalogNodes(packageItem.items || [], {
+      id: packageItem.id,
+      title: packageItem.title,
+    })
+  ));
+}
+
+function catalogText(item) {
+  if (item.kind === "node") {
+    return `${item.type} ${item.className} ${item.title} ${item.description} ${item.package}`.toLowerCase();
   }
-  if (node.type.includes("prompt")) {
-    return "Prompt";
-  }
-  if (node.type.includes("output")) {
-    return "Output";
-  }
-  if (node.type === "provider_call") {
-    return "Provider";
-  }
-  return "Other";
+  return `${item.id} ${item.title} ${item.description || ""}`.toLowerCase();
+}
+
+function filterCatalogItems(items, query) {
+  return items.flatMap((item) => {
+    if (item.kind === "node") {
+      return catalogText(item).includes(query) ? [item] : [];
+    }
+    if (item.kind !== "group") {
+      return [];
+    }
+    if (catalogText(item).includes(query)) {
+      return [item];
+    }
+    const children = filterCatalogItems(item.items || [], query);
+    return children.length > 0 ? [{...item, items: children}] : [];
+  });
 }
 
 function filterNodeCatalog() {
   const query = nodeSearchEl.value.trim().toLowerCase();
-  return nodeCatalog.filter((node) => {
-    const haystack = `${node.type} ${node.className} ${node.title} ${node.description}`.toLowerCase();
-    return haystack.includes(query);
+  if (!query) {
+    return nodeCatalog;
+  }
+  return nodeCatalog.flatMap((packageItem) => {
+    if (catalogText(packageItem).includes(query)) {
+      return [packageItem];
+    }
+    const children = filterCatalogItems(packageItem.items || [], query);
+    return children.length > 0 ? [{...packageItem, items: children}] : [];
   });
 }
 
 function renderLibrary() {
   libraryEl.innerHTML = "";
-  const grouped = new Map();
-  filterNodeCatalog().forEach((node) => {
-    const category = categoryForNode(node);
-    if (!grouped.has(category)) {
-      grouped.set(category, []);
-    }
-    grouped.get(category).push(node);
+  filterNodeCatalog().forEach((packageItem) => {
+    const section = document.createElement("section");
+    section.className = "node-package";
+    section.innerHTML = `
+      <h3>${packageItem.title}</h3>
+      <p>${packageItem.description}</p>
+    `;
+    renderCatalogItems(section, packageItem.items || []);
+    libraryEl.appendChild(section);
   });
+}
 
-  grouped.forEach((nodes, category) => {
+function renderCatalogItems(container, items, depth = 0) {
+  items.forEach((item) => {
+    if (item.kind === "node") {
+      container.appendChild(renderNodeCard(item));
+      return;
+    }
+    if (item.kind !== "group") {
+      return;
+    }
     const group = document.createElement("section");
     group.className = "node-group";
-    group.innerHTML = `<h3>${category}</h3>`;
-    nodes.forEach((node) => group.appendChild(renderNodeCard(node)));
-    libraryEl.appendChild(group);
+    group.dataset.depth = String(depth);
+    group.innerHTML = `<h4>${item.title}</h4>`;
+    renderCatalogItems(group, item.items || [], depth + 1);
+    container.appendChild(group);
   });
 }
 
