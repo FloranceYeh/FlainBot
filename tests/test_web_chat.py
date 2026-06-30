@@ -318,12 +318,42 @@ class WebChatTests(unittest.TestCase):
                 body = response.read().decode("utf-8")
 
             self.assertIn("FlainBot Node Planner", body)
-            self.assertIn("FlainBot Chat", body)
-            self.assertIn("app.js", body)
+            self.assertTrue(
+                "/src/frontend/main.js" in body or "/assets/" in body,
+                body,
+            )
+            self.assertIn("id=\"app\"", body)
             self.assertNotIn("chat.js", body)
         finally:
             server.shutdown()
             server.server_close()
+
+    def test_static_server_prefers_vue_dist_shell(self):
+        dist_dir = web_chat.FRONTEND / "dist"
+        dist_dir.mkdir(exist_ok=True)
+        dist_index = dist_dir / "index.html"
+        original = dist_index.read_text(encoding="utf-8") if dist_index.exists() else None
+        dist_index.write_text("<!doctype html><title>Vue Dist Shell</title>", encoding="utf-8")
+
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            with request.urlopen(f"{base_url}/", timeout=5) as response:
+                body = response.read().decode("utf-8")
+
+            self.assertIn("Vue Dist Shell", body)
+        finally:
+            server.shutdown()
+            server.server_close()
+            if original is None:
+                dist_index.unlink()
+                dist_dir.rmdir()
+            else:
+                dist_index.write_text(original, encoding="utf-8")
 
     def test_parse_args_does_not_require_provider(self):
         args = web_chat.parse_args([])

@@ -14,6 +14,8 @@ from flainbot.node_catalog import builtin_node_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
+VUE_DIST = FRONTEND / "dist"
+VUE_ENTRY = ROOT / "index.html"
 
 
 class GraphConfigStore:
@@ -75,9 +77,8 @@ def make_handler(store: GraphConfigStore):
                 self.send_json(builtin_node_catalog())
                 return
 
-            path = "/index.html" if self.path == "/" else self.path
-            file_path = (FRONTEND / path.lstrip("/")).resolve()
-            if not str(file_path).startswith(str(FRONTEND.resolve())):
+            file_path = static_file_path(self.path)
+            if file_path is None:
                 self.send_error(404)
                 return
             if not file_path.exists():
@@ -158,6 +159,19 @@ def make_handler(store: GraphConfigStore):
     return WebChatHandler
 
 
+def static_root() -> Path:
+    return VUE_DIST if (VUE_DIST / "index.html").exists() else ROOT
+
+
+def static_file_path(path: str) -> Path | None:
+    root = static_root()
+    request_path = "/index.html" if path == "/" else path
+    file_path = (root / request_path.lstrip("/")).resolve()
+    if not str(file_path).startswith(str(root.resolve())):
+        return None
+    return file_path
+
+
 def content_type_for(path: Path) -> str:
     if path.suffix == ".html":
         return "text/html; charset=utf-8"
@@ -165,6 +179,8 @@ def content_type_for(path: Path) -> str:
         return "text/css; charset=utf-8"
     if path.suffix == ".js":
         return "text/javascript; charset=utf-8"
+    if path.suffix == ".vue":
+        return "text/plain; charset=utf-8"
     return "application/octet-stream"
 
 

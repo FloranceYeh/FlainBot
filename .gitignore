@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .codex/
 .superpowers/
+node_modules/
+frontend/dist/
