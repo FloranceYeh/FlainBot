@@ -35,6 +35,20 @@ const nodeCatalog = [
     },
   },
   {
+    type: "prompt_builder",
+    className: "PromptBuilderNode",
+    title: "Prompt Builder",
+    description: "Assembles system, user, tools, and context into a JSON prompt payload.",
+    inputs: ["system", "user", "tools", "context"],
+    outputs: ["json"],
+    defaults: {
+      system_prompt: "",
+      user_prompt: "",
+      tools_json: "[]",
+      context_json: "{}",
+    },
+  },
+  {
     type: "chat_output",
     className: "ChatOutputNode",
     title: "Web Chat Output",
@@ -327,6 +341,15 @@ function nodeToPython(node) {
       `    base_url=${quote(node.props.base_url)},\n` +
       `    api_key=${quote(node.props.api_key)},\n` +
       `    model=${quote(node.props.model)},\n` +
+      "))";
+  }
+
+  if (node.type === "prompt_builder") {
+    return `graph.add_node(${quote(node.id)}, PromptBuilderNode(\n` +
+      `    system_prompt=${quote(node.props.system_prompt)},\n` +
+      `    user_prompt=${quote(node.props.user_prompt)},\n` +
+      `    tools_json=${quote(node.props.tools_json)},\n` +
+      `    context_json=${quote(node.props.context_json)},\n` +
       "))";
   }
 

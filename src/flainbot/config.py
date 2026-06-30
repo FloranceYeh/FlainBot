@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from .builtins import ChatInputNode, ChatOutputNode
+from .builtins import ChatInputNode, ChatOutputNode, PromptBuilderNode
 from .graph import Graph
 from .providers import AnthropicMessagesNode, OpenAIChatNode, Transport
 
@@ -47,6 +47,14 @@ def build_node_from_config(
     if node_type == "chat_output":
         return ChatOutputNode()
 
+    if node_type == "prompt_builder":
+        return PromptBuilderNode(
+            system_prompt=props.get("system_prompt", ""),
+            user_prompt=props.get("user_prompt", ""),
+            tools_json=props.get("tools_json", "[]"),
+            context_json=props.get("context_json", "{}"),
+        )
+
     if node_type == "openai":
         return OpenAIChatNode(
             base_url=props["base_url"],
@@ -72,4 +80,3 @@ def api_key_from_props(props: dict[str, Any]) -> str:
     if props.get("api_key_env"):
         return os.environ[props["api_key_env"]]
     raise ValueError("api_key or api_key_env is required")
-
