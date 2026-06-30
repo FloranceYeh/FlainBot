@@ -14,6 +14,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("styles.css", html)
         self.assertIn("app.js", html)
         self.assertIn("save-graph", html)
+        self.assertIn("id=\"status-message\"", html)
         self.assertIn("graph-canvas", html)
         self.assertIn("edge-layer", html)
         self.assertIn("<marker", html)
@@ -31,6 +32,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("data-port", js)
         self.assertIn("marker-end", js)
         self.assertIn("apiUrl(\"/api/graph\")", js)
+        self.assertIn("setStatus(", js)
+        self.assertIn("Could not reach FlainBot server", js)
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn("api_key", js)
 

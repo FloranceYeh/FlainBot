@@ -46,6 +46,24 @@ class WebChatTests(unittest.TestCase):
 
         self.assertEqual(reply, {"reply": "echo: hello"})
 
+    def test_run_chat_can_echo_direct_input_to_output_graph(self):
+        store = web_chat.GraphConfigStore()
+        store.save(
+            {
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+                ],
+            }
+        )
+
+        reply = web_chat.run_chat("hello", store)
+
+        self.assertEqual(reply, {"reply": "hello"})
+
     def test_graph_api_saves_and_loads_config(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))

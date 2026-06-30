@@ -56,6 +56,7 @@ const nodeLayerEl = document.getElementById("node-layer");
 const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
 const pythonCodeEl = document.getElementById("python-code");
+const statusMessageEl = document.getElementById("status-message");
 const viewEls = document.querySelectorAll("[data-view]");
 const viewTabEls = document.querySelectorAll("[data-route]");
 const chatFormEl = document.getElementById("chat-form");
@@ -348,6 +349,11 @@ function renderCode() {
   pythonCodeEl.textContent = generatePython();
 }
 
+function setStatus(message, type = "") {
+  statusMessageEl.textContent = message;
+  statusMessageEl.className = `status-message${type ? ` ${type}` : ""}`;
+}
+
 function serializeGraph() {
   return {
     nodes: graph.nodes.map((node) => ({
@@ -362,11 +368,16 @@ function serializeGraph() {
 }
 
 async function saveGraph() {
-  const response = await fetch(apiUrl("/api/graph"), {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(serializeGraph()),
-  });
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/graph"), {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(serializeGraph()),
+    });
+  } catch (error) {
+    throw new Error("Could not reach FlainBot server. Start it with: python start.py");
+  }
   if (!response.ok) {
     throw new Error(`save failed: ${response.status}`);
   }
@@ -437,7 +448,13 @@ document.getElementById("copy-code").addEventListener("click", async () => {
 });
 
 document.getElementById("save-graph").addEventListener("click", async () => {
-  await saveGraph();
+  setStatus("Saving graph...");
+  try {
+    await saveGraph();
+    setStatus("Graph saved for Web Chat.", "success");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
 });
 
 viewTabEls.forEach((button) => {
