@@ -2,6 +2,7 @@ let nodeCatalog = [];
 let flatNodeCatalog = [];
 let graph = {nodes: [], edges: []};
 let providers = [];
+let personas = [];
 let selectedId = null;
 let connectionDrag = null;
 let dragState = null;
@@ -36,6 +37,8 @@ const messageInputEl = document.getElementById("message-input");
 const messagesEl = document.getElementById("messages");
 const providerFormEl = document.getElementById("provider-form");
 const providerListEl = document.getElementById("provider-list");
+const personaFormEl = document.getElementById("persona-form");
+const personaListEl = document.getElementById("persona-list");
 
 function defaultApiBaseUrl() {
   if (window.location.protocol === "file:" || window.location.port === "5500") {
@@ -94,6 +97,30 @@ async function saveProviders() {
   });
   if (!response.ok) {
     throw new Error(`provider save failed: ${response.status}`);
+  }
+}
+
+async function loadPersonas() {
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/personas"));
+  } catch (error) {
+    throw new Error("Could not load personas. Start server with: python start.py");
+  }
+  if (!response.ok) {
+    throw new Error(`Could not load personas: ${response.status}`);
+  }
+  personas = await response.json();
+}
+
+async function savePersonas() {
+  const response = await fetch(apiUrl("/api/personas"), {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(personas),
+  });
+  if (!response.ok) {
+    throw new Error(`persona save failed: ${response.status}`);
   }
 }
 
@@ -493,6 +520,9 @@ function renderProperties(node) {
   if (node.type === "provider_call") {
     return renderProviderSelect(node);
   }
+  if (node.type === "persona") {
+    return renderPersonaSelect(node);
+  }
 
   const entries = Object.entries(node.props);
   if (entries.length === 0) {
@@ -507,6 +537,23 @@ function renderProperties(node) {
           <input data-prop-key="${key}" value="${value}">
         </div>
       `).join("")}
+    </form>
+  `;
+}
+
+function renderPersonaSelect(node) {
+  const options = personas.map((persona) => (
+    `<option value="${persona.persona_id}" ${node.props.persona_id === persona.persona_id ? "selected" : ""}>${persona.persona_id}</option>`
+  )).join("");
+  return `
+    <form class="node-properties" autocomplete="off">
+      <div class="field">
+        <label>persona_id</label>
+        <select data-prop-key="persona_id">
+          <option value="">Select persona</option>
+          ${options}
+        </select>
+      </div>
     </form>
   `;
 }
@@ -733,6 +780,11 @@ function nodeToPython(node) {
       "))";
   }
 
+  if (node.type === "persona") {
+    const persona = personas.find((item) => item.persona_id === node.props.persona_id) || {persona_id: node.props.persona_id};
+    return `graph.add_node(${quote(node.id)}, PersonaNode(persona=${quote(persona)}))`;
+  }
+
   return `graph.add_node(${quote(node.id)}, ChatOutputNode())`;
 }
 
@@ -780,6 +832,7 @@ function serializeGraph() {
     })),
     edges: graph.edges,
     providers,
+    personas,
   };
 }
 
@@ -805,6 +858,9 @@ function activeViewFromHash() {
   }
   if (window.location.hash === "#providers") {
     return "providers";
+  }
+  if (window.location.hash === "#personas") {
+    return "personas";
   }
   return "planner";
 }
@@ -871,6 +927,50 @@ function renderProviders() {
   });
 }
 
+function parseJsonOrEmpty(value, emptyValue) {
+  const trimmed = value.trim();
+  return trimmed ? JSON.parse(trimmed) : emptyValue;
+}
+
+function personaFromForm(form) {
+  const data = new FormData(form);
+  return {
+    persona_id: data.get("persona_id").trim(),
+    system_prompt: data.get("system_prompt").trim(),
+    begin_dialogs: data.get("begin_dialogs").split("\n").map((line) => line.trim()).filter(Boolean),
+    tools: parseJsonOrEmpty(data.get("tools_json"), []),
+    skills: parseJsonOrEmpty(data.get("skills_json"), []),
+    custom_error_message: data.get("custom_error_message").trim() || null,
+  };
+}
+
+function renderPersonas() {
+  personaListEl.innerHTML = "";
+  if (personas.length === 0) {
+    personaListEl.innerHTML = '<p class="empty-state">No personas configured.</p>';
+    return;
+  }
+  personas.forEach((persona) => {
+    const item = document.createElement("article");
+    item.className = "persona-card";
+    item.innerHTML = `
+      <div>
+        <span class="node-type">${persona.begin_dialogs.length} begin dialogs</span>
+        <h3>${persona.persona_id}</h3>
+        <p>${persona.system_prompt}</p>
+      </div>
+      <button type="button" class="danger" data-remove-persona="${persona.persona_id}">Remove</button>
+    `;
+    item.querySelector("button").addEventListener("click", async () => {
+      personas = personas.filter((item) => item.persona_id !== persona.persona_id);
+      await savePersonas();
+      renderPersonas();
+      render();
+    });
+    personaListEl.appendChild(item);
+  });
+}
+
 function renderTrace(trace) {
   const details = document.createElement("details");
   details.className = "trace-panel";
@@ -921,9 +1021,11 @@ async function init() {
   try {
     await loadNodeCatalog();
     await loadProviders();
+    await loadPersonas();
     renderNodeFilters();
     renderLibrary();
     renderProviders();
+    renderPersonas();
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -952,6 +1054,23 @@ providerFormEl.addEventListener("submit", async (event) => {
     renderProviders();
     render();
     setStatus("Provider saved.", "success");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+});
+
+personaFormEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    const persona = personaFromForm(form);
+    personas = personas.filter((item) => item.persona_id !== persona.persona_id);
+    personas.push(persona);
+    await savePersonas();
+    form.reset();
+    renderPersonas();
+    render();
+    setStatus("Persona saved.", "success");
   } catch (error) {
     setStatus(error.message, "error");
   }
