@@ -5,6 +5,7 @@ import {
   filterOptions,
   flattenNodeCatalog,
   generatePython,
+  portEdgeAnchor,
 } from "../src/frontend/graph.js";
 
 const catalog = [
@@ -129,4 +130,20 @@ if (!pathWithMidpoint.startsWith("M 10 20 C ") || (pathWithMidpoint.match(/ C /g
 const arrow = connectionArrow({x: 10, y: 20}, {x: 210, y: 120});
 if (arrow.x !== 110 || arrow.y !== 70 || !Number.isFinite(arrow.angle)) {
   throw new Error("connection arrow should be positioned at the smooth curve midpoint");
+}
+
+const outputEdgeAnchor = portEdgeAnchor(
+  {left: 150, right: 250, top: 80, height: 28},
+  {left: 50, top: 20},
+  {x: 10, y: 4, scale: 2},
+  "output",
+);
+const inputEdgeAnchor = portEdgeAnchor(
+  {left: 150, right: 250, top: 80, height: 28},
+  {left: 50, top: 20},
+  {x: 10, y: 4, scale: 2},
+  "input",
+);
+if (outputEdgeAnchor.x !== 95 || inputEdgeAnchor.x !== 45 || outputEdgeAnchor.y !== 35 || inputEdgeAnchor.y !== 35) {
+  throw new Error("port anchors should use the outer edge of the port instead of the button center");
 }

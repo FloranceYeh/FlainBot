@@ -140,6 +140,14 @@ export function connectionArrow(from, to) {
   };
 }
 
+export function portEdgeAnchor(portRect, canvasRect, viewportState, direction) {
+  const edgeX = direction === "output" ? portRect.right : portRect.left;
+  return {
+    x: (edgeX - canvasRect.left - viewportState.x) / viewportState.scale,
+    y: (portRect.top - canvasRect.top + portRect.height / 2 - viewportState.y) / viewportState.scale,
+  };
+}
+
 function cubicPoint(start, controlA, controlB, end, t) {
   const mt = 1 - t;
   return {

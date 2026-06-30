@@ -384,6 +384,7 @@ import {
   flattenNodeCatalog,
   generatePython,
   parseJsonOrEmpty,
+  portEdgeAnchor,
   portName,
   portType,
 } from "./graph.js";
@@ -762,10 +763,7 @@ export default defineComponent({
       }
       const canvasRect = canvasEl.value.getBoundingClientRect();
       const portRect = element.getBoundingClientRect();
-      return {
-        x: (portRect.left - canvasRect.left + portRect.width / 2 - viewportState.x) / viewportState.scale,
-        y: (portRect.top - canvasRect.top + portRect.height / 2 - viewportState.y) / viewportState.scale,
-      };
+      return portEdgeAnchor(portRect, canvasRect, viewportState, direction);
     }
 
     function anchorForPort(nodeId, port, direction) {
