@@ -3,10 +3,13 @@ let graph = {nodes: [], edges: []};
 let selectedId = null;
 let pendingOutput = null;
 let dragState = null;
+let viewportState = {x: 0, y: 0, scale: 1};
+let canvasPanState = null;
 
 const libraryEl = document.getElementById("node-library");
 const nodeSearchEl = document.getElementById("node-search");
 const canvasEl = document.getElementById("graph-canvas");
+const canvasSpaceEl = document.getElementById("canvas-space");
 const nodeLayerEl = document.getElementById("node-layer");
 const edgeLayerEl = document.getElementById("edge-layer");
 const graphCountEl = document.getElementById("graph-count");
@@ -305,6 +308,44 @@ function dragEnd() {
   dragState = null;
 }
 
+function applyViewportTransform() {
+  canvasSpaceEl.style.transform = `translate(${viewportState.x}px, ${viewportState.y}px) scale(${viewportState.scale})`;
+}
+
+function zoomCanvas(event) {
+  event.preventDefault();
+  const delta = event.deltaY > 0 ? -0.08 : 0.08;
+  viewportState.scale = Math.min(1.8, Math.max(0.45, viewportState.scale + delta));
+  applyViewportTransform();
+  renderEdges();
+}
+
+function startCanvasPan(event) {
+  if (event.target.closest(".graph-node") || event.button !== 1) {
+    return;
+  }
+  event.preventDefault();
+  canvasPanState = {
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: viewportState.x,
+    originY: viewportState.y,
+  };
+}
+
+function moveCanvasPan(event) {
+  if (!canvasPanState) {
+    return;
+  }
+  viewportState.x = canvasPanState.originX + event.clientX - canvasPanState.startX;
+  viewportState.y = canvasPanState.originY + event.clientY - canvasPanState.startY;
+  applyViewportTransform();
+}
+
+function endCanvasPan() {
+  canvasPanState = null;
+}
+
 function portCenter(nodeId, portName, direction) {
   const selector = `.port[data-node-id="${nodeId}"][data-port="${portName}"][data-direction="${direction}"]`;
   const port = nodeLayerEl.querySelector(selector);
@@ -523,5 +564,10 @@ chatFormEl.addEventListener("submit", async (event) => {
 canvasEl.addEventListener("pointermove", dragMove);
 canvasEl.addEventListener("pointerup", dragEnd);
 canvasEl.addEventListener("pointercancel", dragEnd);
+canvasEl.addEventListener("wheel", zoomCanvas, {passive: false});
+canvasEl.addEventListener("pointerdown", startCanvasPan);
+canvasEl.addEventListener("pointermove", moveCanvasPan);
+canvasEl.addEventListener("pointerup", endCanvasPan);
+canvasEl.addEventListener("pointercancel", endCanvasPan);
 
 init();

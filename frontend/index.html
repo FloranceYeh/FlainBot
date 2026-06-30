@@ -39,14 +39,16 @@
               <span id="graph-count" class="count">0 nodes</span>
             </div>
             <div id="graph-canvas" class="graph-canvas">
-              <svg id="edge-layer" class="edge-layer">
-                <defs>
-                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                    <polygon points="0 0, 10 3.5, 0 7"></polygon>
-                  </marker>
-                </defs>
-              </svg>
-              <div id="node-layer" class="node-layer"></div>
+              <div id="canvas-space" class="canvas-space" data-canvas-space>
+                <svg id="edge-layer" class="edge-layer">
+                  <defs>
+                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                      <polygon points="0 0, 10 3.5, 0 7"></polygon>
+                    </marker>
+                  </defs>
+                </svg>
+                <div id="node-layer" class="node-layer"></div>
+              </div>
             </div>
           </section>
 

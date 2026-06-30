@@ -255,6 +255,12 @@ button:hover {
   font-size: 16px;
 }
 
+.canvas-space {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+}
+
 .result-rail {
   align-self: stretch;
   overflow: auto;
