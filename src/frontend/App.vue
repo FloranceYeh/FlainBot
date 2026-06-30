@@ -127,7 +127,7 @@
                 >
                   <button
                     type="button"
-                    class="node-remove-triangle"
+                    class="node-remove-dot"
                     title="Remove node"
                     :aria-label="`Remove ${node.id}`"
                     @pointerdown.stop
