@@ -516,31 +516,20 @@ main {
 
 .node-remove-triangle {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 9px;
+  right: 9px;
   z-index: 3;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 14px;
   border: 0;
-  border-radius: 0 7px 0 0;
-  background: transparent;
+  background: var(--danger);
+  clip-path: polygon(50% 0, 0 100%, 100% 100%);
   cursor: pointer;
   padding: 0;
 }
 
-.node-remove-triangle::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-top: 18px solid var(--danger);
-  border-left: 18px solid transparent;
-}
-
-.node-remove-triangle:hover::before {
-  border-top-color: #d92d20;
+.node-remove-triangle:hover {
+  background: #d92d20;
 }
 
 .node-header {
