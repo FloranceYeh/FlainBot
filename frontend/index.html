@@ -9,19 +9,11 @@
   <body>
     <div class="app-shell">
       <header class="workbench-topbar">
-        <div class="brand">
-          <h1>FlainBot</h1>
-          <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
-        </div>
         <nav class="topbar-tabs" aria-label="Views">
           <button class="view-tab" data-route="planner" type="button">Planner</button>
           <button class="view-tab" data-route="providers" type="button">Providers</button>
           <button class="view-tab" data-route="chat" type="button">Chat</button>
         </nav>
-        <div class="topbar-actions">
-          <button id="save-graph" type="button">Save</button>
-          <button id="reset-graph" type="button">Reset</button>
-        </div>
       </header>
 
       <main>
@@ -37,7 +29,12 @@
           <section class="canvas-panel" aria-labelledby="graph-title">
             <div class="canvas-toolbar">
               <h2 id="graph-title">FlainBot Node Planner</h2>
+              <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
               <span id="graph-count" class="count">0 nodes</span>
+              <div class="canvas-actions">
+                <button id="save-graph" type="button">Save</button>
+                <button id="reset-graph" type="button">Reset</button>
+              </div>
             </div>
             <div id="graph-canvas" class="graph-canvas">
               <div id="canvas-space" class="canvas-space" data-canvas-space>
