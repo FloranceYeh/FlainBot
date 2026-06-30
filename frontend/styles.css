@@ -239,6 +239,19 @@ main {
   background: #ffffff;
 }
 
+.filter-section {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.filter-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .filter-option {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -311,24 +324,35 @@ main {
 }
 
 .node-preview {
+  position: fixed;
+  z-index: 40;
+  width: 300px;
+  pointer-events: none;
+}
+
+.node-preview[hidden] {
   display: none;
-  margin: 10px 0;
+}
+
+.node-preview-card {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  padding: 10px;
-  background: #f8fafc;
-}
-
-.node-card:hover .node-preview,
-.node-card:focus-within .node-preview {
+  padding: 12px;
   display: grid;
   gap: 6px;
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(24, 32, 45, 0.18);
 }
 
+.node-preview h3,
 .node-preview p,
 .node-preview dl,
 .node-preview dd {
   margin: 0;
+}
+
+.node-preview h3 {
+  font-size: 15px;
 }
 
 .node-preview dl {

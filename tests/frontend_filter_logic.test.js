@@ -17,8 +17,11 @@ function element(id) {
       classList: {toggle() {}, remove() {}, add() {}},
       dataset: {},
       style: {},
+      eventListeners: {},
       appendChild() {},
-      addEventListener() {},
+      addEventListener(eventName, callback) {
+        this.eventListeners[eventName] = callback;
+      },
       setAttribute() {},
       querySelector() { return element(`${id}-child`); },
       querySelectorAll(selector) {
@@ -55,7 +58,10 @@ const context = {
 };
 
 vm.createContext(context);
-vm.runInContext(`${appJs}\nthis.__testApi = {collectCatalogNodes, flattenNodeCatalog, filterNodeCatalog, renderNodeFilters};`, context);
+vm.runInContext(
+  `${appJs}\nthis.__testApi = {collectCatalogNodes, flattenNodeCatalog, filterNodeCatalog, renderNodeFilters, renderNodeCard};`,
+  context,
+);
 
 const catalog = [
   {
@@ -127,4 +133,21 @@ element("output-type-filter-options-image").checked = true;
 filtered = context.__testApi.filterNodeCatalog();
 if (filtered.length !== 2) {
   throw new Error("output type filter should support multiple selected output types");
+}
+
+const card = context.__testApi.renderNodeCard(catalog[0].items[0]);
+card.eventListeners.mouseenter({clientX: 100, clientY: 120});
+const preview = element("node-preview-popover");
+if (preview.hidden || !preview.innerHTML.includes("Prompt Builder")) {
+  throw new Error("node hover should show a floating preview card");
+}
+
+card.eventListeners.mousemove({clientX: 140, clientY: 160});
+if (preview.style.left !== "152px" || preview.style.top !== "172px") {
+  throw new Error("node preview should follow the mouse cursor");
+}
+
+card.eventListeners.mouseleave();
+if (!preview.hidden) {
+  throw new Error("node preview should hide when the cursor leaves the node card");
 }

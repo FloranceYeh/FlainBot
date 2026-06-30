@@ -24,17 +24,20 @@
               <h2 id="library-title">Nodes</h2>
               <input id="node-search" type="search" autocomplete="off" placeholder="Search nodes">
               <div class="node-filters" aria-label="Node filters">
-                <details class="filter-dropdown" data-filter-label="Package">
-                  <summary id="package-filter-summary">All packages</summary>
-                  <div id="package-filter-options" class="filter-options"></div>
-                </details>
-                <details class="filter-dropdown" data-filter-label="Input type">
-                  <summary id="input-type-filter-summary">All input types</summary>
-                  <div id="input-type-filter-options" class="filter-options"></div>
-                </details>
-                <details class="filter-dropdown" data-filter-label="Output type">
-                  <summary id="output-type-filter-summary">All output types</summary>
-                  <div id="output-type-filter-options" class="filter-options"></div>
+                <details id="node-filter-dropdown" class="filter-dropdown">
+                  <summary id="node-filter-summary">Filters</summary>
+                  <section class="filter-section" data-filter-label="Package">
+                    <h3 id="package-filter-summary">Package</h3>
+                    <div id="package-filter-options" class="filter-options"></div>
+                  </section>
+                  <section class="filter-section" data-filter-label="Input type">
+                    <h3 id="input-type-filter-summary">Input type</h3>
+                    <div id="input-type-filter-options" class="filter-options"></div>
+                  </section>
+                  <section class="filter-section" data-filter-label="Output type">
+                    <h3 id="output-type-filter-summary">Output type</h3>
+                    <div id="output-type-filter-options" class="filter-options"></div>
+                  </section>
                 </details>
               </div>
             </div>
@@ -132,6 +135,7 @@
         </section>
       </main>
     </div>
+    <div id="node-preview-popover" class="node-preview" hidden></div>
 
     <script src="app.js"></script>
   </body>

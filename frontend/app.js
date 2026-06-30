@@ -17,6 +17,8 @@ const outputTypeFilterOptionsEl = document.getElementById("output-type-filter-op
 const packageFilterSummaryEl = document.getElementById("package-filter-summary");
 const inputTypeFilterSummaryEl = document.getElementById("input-type-filter-summary");
 const outputTypeFilterSummaryEl = document.getElementById("output-type-filter-summary");
+const nodeFilterSummaryEl = document.getElementById("node-filter-summary");
+const nodePreviewPopoverEl = document.getElementById("node-preview-popover");
 const canvasEl = document.getElementById("graph-canvas");
 const canvasSpaceEl = document.getElementById("canvas-space");
 const nodeLayerEl = document.getElementById("node-layer");
@@ -195,15 +197,16 @@ function selectedFilterValues(container) {
   return Array.from(container.querySelectorAll("input:checked")).map((input) => input.value);
 }
 
-function updateFilterSummary(summaryEl, selectedValues, defaultLabel) {
-  if (selectedValues.length === 0) {
-    summaryEl.textContent = defaultLabel;
-    return;
-  }
-  summaryEl.textContent = selectedValues.length === 1 ? selectedValues[0] : `${selectedValues.length} selected`;
+function updateNodeFilterSummary() {
+  const selectedCount = (
+    selectedFilterValues(packageFilterOptionsEl).length
+    + selectedFilterValues(inputTypeFilterOptionsEl).length
+    + selectedFilterValues(outputTypeFilterOptionsEl).length
+  );
+  nodeFilterSummaryEl.textContent = selectedCount === 0 ? "Filters" : `Filters (${selectedCount})`;
 }
 
-function renderFilterOptions(container, summaryEl, values, defaultLabel) {
+function renderFilterOptions(container, values) {
   const current = new Set(selectedFilterValues(container));
   container.innerHTML = "";
   values.forEach((value) => {
@@ -216,13 +219,16 @@ function renderFilterOptions(container, summaryEl, values, defaultLabel) {
     `;
     container.appendChild(label);
   });
-  updateFilterSummary(summaryEl, selectedFilterValues(container), defaultLabel);
+  updateNodeFilterSummary();
 }
 
 function renderNodeFilters() {
-  renderFilterOptions(packageFilterOptionsEl, packageFilterSummaryEl, filterOptions(flatNodeCatalog, "package"), "All packages");
-  renderFilterOptions(inputTypeFilterOptionsEl, inputTypeFilterSummaryEl, filterOptions(flatNodeCatalog, "input"), "All input types");
-  renderFilterOptions(outputTypeFilterOptionsEl, outputTypeFilterSummaryEl, filterOptions(flatNodeCatalog, "output"), "All output types");
+  packageFilterSummaryEl.textContent = "Package";
+  inputTypeFilterSummaryEl.textContent = "Input type";
+  outputTypeFilterSummaryEl.textContent = "Output type";
+  renderFilterOptions(packageFilterOptionsEl, filterOptions(flatNodeCatalog, "package"));
+  renderFilterOptions(inputTypeFilterOptionsEl, filterOptions(flatNodeCatalog, "input"));
+  renderFilterOptions(outputTypeFilterOptionsEl, filterOptions(flatNodeCatalog, "output"));
 }
 
 function nodeMatchesFilters(node, filters) {
@@ -340,8 +346,9 @@ function portList(ports) {
 
 function nodePreview(node) {
   return `
-    <div class="node-preview" role="tooltip">
-      <span class="node-type">${node.packageTitle || node.packageId || node.package}</span>
+    <article class="node-preview-card">
+      <span class="node-type">${node.className} / ${node.packageTitle || node.packageId || node.package}</span>
+      <h3>${node.title}</h3>
       <p>${node.description}</p>
       <dl>
         <dt>Inputs</dt>
@@ -349,8 +356,24 @@ function nodePreview(node) {
         <dt>Outputs</dt>
         <dd>${portList(node.outputs || [])}</dd>
       </dl>
-    </div>
+    </article>
   `;
+}
+
+function moveNodePreview(event) {
+  const offset = 12;
+  nodePreviewPopoverEl.style.left = `${event.clientX + offset}px`;
+  nodePreviewPopoverEl.style.top = `${event.clientY + offset}px`;
+}
+
+function showNodePreview(node, event) {
+  nodePreviewPopoverEl.innerHTML = nodePreview(node);
+  nodePreviewPopoverEl.hidden = false;
+  moveNodePreview(event);
+}
+
+function hideNodePreview() {
+  nodePreviewPopoverEl.hidden = true;
 }
 
 function renderNodeCard(node) {
@@ -360,9 +383,11 @@ function renderNodeCard(node) {
     <span class="node-type">${node.className}</span>
     <h4>${node.title}</h4>
     <p>${node.description}</p>
-    ${nodePreview(node)}
     <button type="button" class="add-node-button">Add node</button>
   `;
+  card.addEventListener("mouseenter", (event) => showNodePreview(node, event));
+  card.addEventListener("mousemove", moveNodePreview);
+  card.addEventListener("mouseleave", hideNodePreview);
   card.querySelector("button").addEventListener("click", () => addNode(node.type));
   return card;
 }
@@ -891,15 +916,15 @@ providerFormEl.addEventListener("submit", async (event) => {
 
 nodeSearchEl.addEventListener("input", renderLibrary);
 packageFilterOptionsEl.addEventListener("change", () => {
-  updateFilterSummary(packageFilterSummaryEl, selectedFilterValues(packageFilterOptionsEl), "All packages");
+  updateNodeFilterSummary();
   renderLibrary();
 });
 inputTypeFilterOptionsEl.addEventListener("change", () => {
-  updateFilterSummary(inputTypeFilterSummaryEl, selectedFilterValues(inputTypeFilterOptionsEl), "All input types");
+  updateNodeFilterSummary();
   renderLibrary();
 });
 outputTypeFilterOptionsEl.addEventListener("change", () => {
-  updateFilterSummary(outputTypeFilterSummaryEl, selectedFilterValues(outputTypeFilterOptionsEl), "All output types");
+  updateNodeFilterSummary();
   renderLibrary();
 });
 resultPanelToggleEl.addEventListener("click", toggleResultPanel);
