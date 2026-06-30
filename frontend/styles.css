@@ -749,6 +749,29 @@ code {
   background: #ffffff;
 }
 
+.message p {
+  margin: 0;
+}
+
+.trace-panel {
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+}
+
+.trace-panel summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trace-panel pre {
+  max-height: 220px;
+  min-height: 0;
+  margin-top: 8px;
+  padding: 10px;
+}
+
 .composer {
   display: grid;
   grid-template-columns: 1fr auto;

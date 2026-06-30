@@ -53,7 +53,13 @@ class WebChatTests(unittest.TestCase):
 
         reply = web_chat.run_chat("hello", store, transports={"openai_chat": fake_transport})
 
-        self.assertEqual(reply, {"reply": "echo: hello"})
+        self.assertEqual(reply["reply"], "echo: hello")
+        self.assertEqual(
+            [item["node_id"] for item in reply["trace"]],
+            ["chat_input_1", "echo_1", "chat_output_1"],
+        )
+        self.assertEqual(reply["trace"][0]["outputs"], {"text": "hello"})
+        self.assertEqual(reply["trace"][2]["outputs"], {"reply": "echo: hello"})
 
     def test_run_chat_can_echo_direct_input_to_output_graph(self):
         store = web_chat.GraphConfigStore()
@@ -71,7 +77,14 @@ class WebChatTests(unittest.TestCase):
 
         reply = web_chat.run_chat("hello", store)
 
-        self.assertEqual(reply, {"reply": "hello"})
+        self.assertEqual(reply["reply"], "hello")
+        self.assertEqual(
+            reply["trace"],
+            [
+                {"node_id": "chat_input_1", "inputs": {}, "outputs": {"text": "hello"}},
+                {"node_id": "chat_output_1", "inputs": {"text": "hello"}, "outputs": {"reply": "hello"}},
+            ],
+        )
 
     def test_graph_api_saves_and_loads_config(self):
         store = web_chat.GraphConfigStore()

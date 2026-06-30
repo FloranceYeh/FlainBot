@@ -871,10 +871,31 @@ function renderProviders() {
   });
 }
 
-function appendMessage(role, text) {
+function renderTrace(trace) {
+  const details = document.createElement("details");
+  details.className = "trace-panel";
+  const summary = document.createElement("summary");
+  summary.textContent = `Runtime trace (${trace.length})`;
+  const pre = document.createElement("pre");
+  const code = document.createElement("code");
+  code.textContent = JSON.stringify(trace, null, 2);
+  pre.appendChild(code);
+  details.appendChild(summary);
+  details.appendChild(pre);
+  return details;
+}
+
+function appendMessage(role, text, trace = []) {
   const item = document.createElement("div");
   item.className = `message ${role}`;
   item.textContent = text;
+  if (trace.length > 0) {
+    item.textContent = "";
+    const body = document.createElement("p");
+    body.textContent = text;
+    item.appendChild(body);
+    item.appendChild(renderTrace(trace));
+  }
   messagesEl.appendChild(item);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
@@ -983,7 +1004,7 @@ chatFormEl.addEventListener("submit", async (event) => {
 
   try {
     const payload = await sendChatMessage(message);
-    appendMessage("assistant", payload.reply);
+    appendMessage("assistant", payload.reply, payload.trace);
   } catch (error) {
     appendMessage("assistant", `Request failed: ${error.message}`);
   }

@@ -35,9 +35,10 @@ class GraphConfigStore:
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
     graph = build_graph_from_config(store.load(), message=message, transports=transports)
-    outputs = GraphExecutor(graph).run()
+    executor = GraphExecutor(graph)
+    outputs = executor.run()
     reply_node_id = find_chat_output_node_id(store.load())
-    return {"reply": outputs[reply_node_id]["reply"]}
+    return {"reply": outputs[reply_node_id]["reply"], "trace": executor.trace}
 
 
 def find_chat_output_node_id(config: dict) -> str:

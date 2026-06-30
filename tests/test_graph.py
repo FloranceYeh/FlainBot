@@ -58,6 +58,35 @@ class GraphTests(unittest.TestCase):
         self.assertEqual(calls, ["first", "second"])
         self.assertEqual(outputs["second"]["value"], 3)
 
+    def test_graph_executor_records_node_trace(self):
+        class Source:
+            name = "source"
+
+            def run(self, inputs):
+                return {"text": "hello"}
+
+        class Upper:
+            name = "upper"
+
+            def run(self, inputs):
+                return {"text": inputs["text"].upper()}
+
+        graph = Graph()
+        graph.add_node("source", Source())
+        graph.add_node("upper", Upper())
+        graph.connect("source", "text", "upper", "text")
+
+        executor = GraphExecutor(graph)
+        executor.run()
+
+        self.assertEqual(
+            executor.trace,
+            [
+                {"node_id": "source", "inputs": {}, "outputs": {"text": "hello"}},
+                {"node_id": "upper", "inputs": {"text": "hello"}, "outputs": {"text": "HELLO"}},
+            ],
+        )
+
     def test_graph_rejects_cycles(self):
         class Passthrough:
             name = "passthrough"

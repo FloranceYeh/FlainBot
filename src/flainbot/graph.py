@@ -54,16 +54,29 @@ class Graph:
 class GraphExecutor:
     def __init__(self, graph: Graph) -> None:
         self._graph = graph
+        self._trace: list[dict[str, Any]] = []
+
+    @property
+    def trace(self) -> list[dict[str, Any]]:
+        return list(self._trace)
 
     def run(self, inputs: dict[str, Any] | None = None) -> dict[str, dict[str, Any]]:
         order = self._topological_order()
         outputs: dict[str, dict[str, Any]] = {}
+        self._trace = []
 
         for node_id in order:
             node_inputs = self._inputs_for(node_id, outputs)
             if inputs and node_id in inputs:
                 node_inputs.update(inputs[node_id])
             outputs[node_id] = self._graph.nodes[node_id].run(node_inputs)
+            self._trace.append(
+                {
+                    "node_id": node_id,
+                    "inputs": dict(node_inputs),
+                    "outputs": outputs[node_id],
+                }
+            )
 
         return outputs
 
@@ -101,4 +114,3 @@ class GraphExecutor:
         if len(order) != len(nodes):
             raise GraphError("graph contains a cycle")
         return order
-
