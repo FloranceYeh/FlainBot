@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from flainbot import GraphExecutor
 from flainbot.config import build_graph_from_config
+from flainbot.node_catalog import builtin_node_catalog
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
@@ -46,6 +47,9 @@ def make_handler(store: GraphConfigStore):
             if self.path == "/api/graph":
                 self.send_json(store.load())
                 return
+            if self.path == "/api/nodes":
+                self.send_json(builtin_node_catalog())
+                return
 
             path = "/index.html" if self.path == "/" else self.path
             file_path = (FRONTEND / path.lstrip("/")).resolve()
@@ -78,7 +82,7 @@ def make_handler(store: GraphConfigStore):
             self.send_json(run_chat(payload["message"], store))
 
         def do_OPTIONS(self) -> None:
-            if self.path not in {"/api/graph", "/api/chat"}:
+            if self.path not in {"/api/graph", "/api/chat", "/api/nodes"}:
                 self.send_error(404)
                 return
 

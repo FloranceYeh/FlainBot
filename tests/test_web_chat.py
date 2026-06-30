@@ -89,6 +89,40 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_nodes_api_returns_builtin_node_catalog(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            with request.urlopen(f"{base_url}/api/nodes", timeout=5) as response:
+                catalog = json.loads(response.read().decode("utf-8"))
+
+            node_types = {node["type"] for node in catalog}
+            self.assertIn("chat_input", node_types)
+            self.assertIn("chat_output", node_types)
+            self.assertIn("prompt_builder", node_types)
+            self.assertIn("openai", node_types)
+            self.assertIn("anthropic", node_types)
+            class_names = {node["className"] for node in catalog}
+            self.assertIn("ChatInputNode", class_names)
+            self.assertIn("ChatOutputNode", class_names)
+            self.assertIn("PromptBuilderNode", class_names)
+            self.assertIn("OpenAIChatNode", class_names)
+            self.assertIn("AnthropicMessagesNode", class_names)
+            prompt_builder = next(node for node in catalog if node["type"] == "prompt_builder")
+            self.assertEqual(prompt_builder["outputs"], ["json"])
+            self.assertIn("system_prompt", prompt_builder["defaults"])
+            self.assertIn("user_prompt", prompt_builder["defaults"])
+            self.assertIn("tools_json", prompt_builder["defaults"])
+            self.assertIn("context_json", prompt_builder["defaults"])
+            self.assertTrue(all("inputs" in node and "outputs" in node for node in catalog))
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_graph_api_accepts_browser_preflight_from_static_server(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))

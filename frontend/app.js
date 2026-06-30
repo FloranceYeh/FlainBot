@@ -1,64 +1,4 @@
-const nodeCatalog = [
-  {
-    type: "chat_input",
-    className: "ChatInputNode",
-    title: "Web Chat Input",
-    description: "Reads the user's message from the web chat input.",
-    inputs: [],
-    outputs: ["text"],
-    defaults: {},
-  },
-  {
-    type: "openai",
-    className: "OpenAIChatNode",
-    title: "OpenAI Chat",
-    description: "Consumes text and calls an OpenAI-compatible chat endpoint.",
-    inputs: ["text"],
-    outputs: ["text", "request", "response"],
-    defaults: {
-      base_url: "https://api.openai.com/v1",
-      api_key: "",
-      model: "gpt-4.1-mini",
-    },
-  },
-  {
-    type: "anthropic",
-    className: "AnthropicMessagesNode",
-    title: "Anthropic Messages",
-    description: "Consumes text and calls the Anthropic Messages API.",
-    inputs: ["text"],
-    outputs: ["text", "request", "response"],
-    defaults: {
-      base_url: "https://api.anthropic.com/v1",
-      api_key: "",
-      model: "claude-sonnet-4-5",
-    },
-  },
-  {
-    type: "prompt_builder",
-    className: "PromptBuilderNode",
-    title: "Prompt Builder",
-    description: "Assembles system, user, tools, and context into a JSON prompt payload.",
-    inputs: ["system", "user", "tools", "context"],
-    outputs: ["json"],
-    defaults: {
-      system_prompt: "",
-      user_prompt: "",
-      tools_json: "[]",
-      context_json: "{}",
-    },
-  },
-  {
-    type: "chat_output",
-    className: "ChatOutputNode",
-    title: "Web Chat Output",
-    description: "Sends model text to the web chat message list.",
-    inputs: ["text"],
-    outputs: ["reply"],
-    defaults: {},
-  },
-];
-
+let nodeCatalog = [];
 let graph = {nodes: [], edges: []};
 let selectedId = null;
 let pendingOutput = null;
@@ -99,8 +39,25 @@ function cloneDefaults(defaults) {
   return JSON.parse(JSON.stringify(defaults));
 }
 
+async function loadNodeCatalog() {
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/nodes"));
+  } catch (error) {
+    throw new Error("Could not load node catalog. Start server with: python start.py");
+  }
+  if (!response.ok) {
+    throw new Error(`Could not load node catalog: ${response.status}`);
+  }
+  nodeCatalog = await response.json();
+}
+
 function addNode(type) {
   const spec = nodeCatalog.find((node) => node.type === type);
+  if (!spec) {
+    setStatus(`Unknown node type: ${type}`, "error");
+    return;
+  }
   const offset = graph.nodes.length * 28;
   const item = {
     id: nextId(spec.type),
@@ -462,6 +419,18 @@ function render() {
   renderCode();
 }
 
+async function init() {
+  try {
+    await loadNodeCatalog();
+    renderLibrary();
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+
+  render();
+  setActiveView(activeViewFromHash());
+}
+
 document.getElementById("reset-graph").addEventListener("click", () => {
   graph = {nodes: [], edges: []};
   selectedId = null;
@@ -511,6 +480,4 @@ canvasEl.addEventListener("pointermove", dragMove);
 canvasEl.addEventListener("pointerup", dragEnd);
 canvasEl.addEventListener("pointercancel", dragEnd);
 
-renderLibrary();
-render();
-setActiveView(activeViewFromHash());
+init();
