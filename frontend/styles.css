@@ -18,9 +18,14 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  height: 100vh;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", Arial, sans-serif;
@@ -49,7 +54,13 @@ button:hover {
 .app-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+main {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .workbench-topbar {
@@ -104,7 +115,7 @@ button:hover {
   display: grid;
   grid-template-columns: 280px minmax(520px, 1fr) minmax(44px, 320px);
   gap: 12px;
-  height: calc(100vh - 72px);
+  height: 100%;
   min-height: 0;
   padding: 12px;
 }
@@ -513,7 +524,8 @@ code {
   display: grid;
   grid-template-rows: auto 1fr auto;
   width: min(880px, calc(100% - 32px));
-  min-height: calc(100vh - 92px);
+  height: calc(100% - 32px);
+  min-height: 0;
   margin: 16px auto;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
@@ -540,7 +552,7 @@ code {
   display: grid;
   align-content: start;
   gap: 12px;
-  min-height: 420px;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
 }
@@ -606,11 +618,10 @@ code {
   }
 
   .canvas-panel {
-    min-height: 620px;
+    min-height: 0;
   }
 
   .chat-shell {
     width: auto;
-    min-height: calc(100vh - 112px);
   }
 }

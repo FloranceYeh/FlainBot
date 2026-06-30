@@ -104,9 +104,14 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("apiUrl(\"/api/chat\")", js)
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn(".chat-shell", css)
+        self.assertIn("html,\nbody", css)
+        self.assertIn("overflow: hidden", css)
+        self.assertIn("height: 100vh", css)
+        self.assertIn("main {\n  min-height: 0;\n  overflow: hidden;", css)
         self.assertIn("grid-template-rows: auto minmax(0, 1fr)", css)
         self.assertIn("overflow-y: auto", css)
         self.assertIn(".planner-workbench.result-collapsed", css)
+        self.assertIn("height: 100%", css)
 
     def test_standalone_chat_assets_were_removed(self):
         self.assertFalse((ROOT / "frontend" / "chat.html").exists())
