@@ -17,7 +17,7 @@
 - Modify: `frontend/index.html`
 - Modify: `frontend/styles.css`
 
-- [ ] **Step 1: Write failing static tests for the target shell**
+- [x] **Step 1: Write failing static tests for the target shell**
 
 Update `tests/test_frontend_static.py` so `test_planner_page_references_assets_and_nodes` asserts the ComfyUI workbench structure:
 
@@ -36,7 +36,7 @@ self.assertIn("node-properties", js)
 
 Keep the existing assertions that standalone chat assets do not exist.
 
-- [ ] **Step 2: Verify the new test fails**
+- [x] **Step 2: Verify the new test fails**
 
 Run:
 
@@ -46,7 +46,7 @@ python -m unittest tests.test_frontend_static -v
 
 Expected: failure because `app-shell`, `workbench-topbar`, `node-search`, and collapsed result panel markup are not present yet.
 
-- [ ] **Step 3: Implement the static HTML shell**
+- [x] **Step 3: Implement the static HTML shell**
 
 Change `frontend/index.html` to this structure while keeping the current element IDs used by JavaScript:
 
@@ -117,7 +117,7 @@ Change `frontend/index.html` to this structure while keeping the current element
 
 The Chat section can reuse the current `chat-header`, `messages`, and `composer` markup inside the same `index.html`.
 
-- [ ] **Step 4: Add the minimum CSS for the shell**
+- [x] **Step 4: Add the minimum CSS for the shell**
 
 Update `frontend/styles.css` with the workbench containers:
 
@@ -161,7 +161,7 @@ Update `frontend/styles.css` with the workbench containers:
 }
 ```
 
-- [ ] **Step 5: Verify the static shell test passes**
+- [x] **Step 5: Verify the static shell test passes**
 
 Run:
 
@@ -171,7 +171,7 @@ python -m unittest tests.test_frontend_static -v
 
 Expected: all tests in `tests.test_frontend_static` pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -187,7 +187,7 @@ git commit -m "feat: add workbench frontend shell"
 - Modify: `frontend/app.js`
 - Modify: `frontend/styles.css`
 
-- [ ] **Step 1: Write failing static tests for node shelf behavior**
+- [x] **Step 1: Write failing static tests for node shelf behavior**
 
 Add assertions to `test_planner_page_references_assets_and_nodes`:
 
@@ -199,7 +199,7 @@ self.assertIn("categoryForNode", js)
 self.assertIn("node-search", js)
 ```
 
-- [ ] **Step 2: Verify the new test fails**
+- [x] **Step 2: Verify the new test fails**
 
 Run:
 
@@ -209,7 +209,7 @@ python -m unittest tests.test_frontend_static -v
 
 Expected: failure because search and grouping helpers do not exist yet.
 
-- [ ] **Step 3: Implement node shelf search and frontend-only groups**
+- [x] **Step 3: Implement node shelf search and frontend-only groups**
 
 In `frontend/app.js`, add:
 
@@ -274,7 +274,7 @@ Add the listener:
 nodeSearchEl.addEventListener("input", renderLibrary);
 ```
 
-- [ ] **Step 4: Add shelf CSS**
+- [x] **Step 4: Add shelf CSS**
 
 Add CSS:
 
@@ -308,7 +308,7 @@ Add CSS:
 }
 ```
 
-- [ ] **Step 5: Verify search and grouping checks pass**
+- [x] **Step 5: Verify search and grouping checks pass**
 
 Run:
 
@@ -319,7 +319,7 @@ node --check frontend/app.js
 
 Expected: frontend static tests pass and `node --check` exits 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -335,7 +335,7 @@ git commit -m "feat: add searchable node shelf"
 - Modify: `frontend/app.js`
 - Modify: `frontend/styles.css`
 
-- [ ] **Step 1: Write failing static tests for collapsed live output**
+- [x] **Step 1: Write failing static tests for collapsed live output**
 
 Add assertions:
 
@@ -347,7 +347,7 @@ self.assertIn("renderCode()", js)
 self.assertIn("updateProperty", js)
 ```
 
-- [ ] **Step 2: Verify the test fails if the panel is not collapsed**
+- [x] **Step 2: Verify the test fails if the panel is not collapsed**
 
 Run:
 
@@ -357,7 +357,7 @@ python -m unittest tests.test_frontend_static -v
 
 Expected: failure until the `details` panel exists without an `open` attribute.
 
-- [ ] **Step 3: Ensure graph changes refresh Generated Python**
+- [x] **Step 3: Ensure graph changes refresh Generated Python**
 
 Keep `renderCode()` inside `render()`. Ensure these paths call either `render()` or `renderCode()`:
 
@@ -385,7 +385,7 @@ function addEdge(fromNode, fromPort, toNode, toPort) {
 
 This preserves live generated output without requiring a backend save.
 
-- [ ] **Step 4: Style the result rail as secondary**
+- [x] **Step 4: Style the result rail as secondary**
 
 Add:
 
@@ -407,7 +407,7 @@ Add:
 }
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run:
 
@@ -418,7 +418,7 @@ node --check frontend/app.js
 
 Expected: tests pass and JS parses.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
@@ -434,7 +434,7 @@ git commit -m "feat: add live generated output rail"
 - Modify: `frontend/app.js`
 - Modify: `frontend/styles.css`
 
-- [ ] **Step 1: Write failing static tests for pan and zoom hooks**
+- [x] **Step 1: Write failing static tests for pan and zoom hooks**
 
 Add assertions:
 
@@ -446,7 +446,7 @@ self.assertIn("startCanvasPan", js)
 self.assertIn("data-canvas-space", js)
 ```
 
-- [ ] **Step 2: Verify the test fails**
+- [x] **Step 2: Verify the test fails**
 
 Run:
 
@@ -456,7 +456,7 @@ python -m unittest tests.test_frontend_static -v
 
 Expected: failure because pan and zoom state does not exist.
 
-- [ ] **Step 3: Add a transform layer inside the canvas**
+- [x] **Step 3: Add a transform layer inside the canvas**
 
 In `frontend/index.html`, wrap the edge and node layers:
 
@@ -473,7 +473,7 @@ Update JS element lookup:
 const canvasSpaceEl = document.getElementById("canvas-space");
 ```
 
-- [ ] **Step 4: Implement minimal viewport state**
+- [x] **Step 4: Implement minimal viewport state**
 
 Add:
 
@@ -528,7 +528,7 @@ canvasEl.addEventListener("pointercancel", endCanvasPan);
 
 Keep existing node drag events intact.
 
-- [ ] **Step 5: Add transform CSS**
+- [x] **Step 5: Add transform CSS**
 
 ```css
 .canvas-space {
@@ -538,7 +538,7 @@ Keep existing node drag events intact.
 }
 ```
 
-- [ ] **Step 6: Verify**
+- [x] **Step 6: Verify**
 
 Run:
 
@@ -549,7 +549,7 @@ node --check frontend/app.js
 
 Expected: tests pass and JS parses.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 
@@ -563,7 +563,7 @@ git commit -m "feat: add canvas pan and zoom"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-06-30-comfyui-workbench-frontend.md`
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 Run:
 
@@ -573,7 +573,7 @@ python -m unittest -v
 
 Expected: all tests pass.
 
-- [ ] **Step 2: Run syntax checks**
+- [x] **Step 2: Run syntax checks**
 
 Run:
 
@@ -584,7 +584,7 @@ python -m py_compile scripts\web_chat.py src\flainbot\node_catalog.py
 
 Expected: all commands exit 0.
 
-- [ ] **Step 3: Start the app for manual browser check**
+- [x] **Step 3: Start the app for manual browser check**
 
 Run:
 
@@ -607,7 +607,7 @@ Manual checks:
 - Generated Python is collapsed by default and updates after adding nodes or editing props.
 - Save then Chat still routes through the existing graph backend.
 
-- [ ] **Step 4: Mark plan complete and commit**
+- [x] **Step 4: Mark plan complete and commit**
 
 Update this plan's checkboxes to `[x]` for completed tasks, then run:
 
