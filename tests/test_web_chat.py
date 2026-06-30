@@ -189,7 +189,7 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
-    def test_nodes_api_returns_builtin_node_catalog(self):
+    def test_nodes_api_returns_dynamic_node_catalog(self):
         store = web_chat.GraphConfigStore()
         server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
         thread = threading.Thread(target=server.serve_forever, daemon=True)

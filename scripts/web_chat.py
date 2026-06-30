@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from flainbot import GraphExecutor
 from flainbot.config import build_graph_from_config
-from flainbot.node_catalog import builtin_node_catalog
+from flainbot.node_registry import discover_node_registry
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT / "frontend"
@@ -74,7 +74,7 @@ def make_handler(store: GraphConfigStore):
                 self.send_json(store.load_personas())
                 return
             if self.path == "/api/nodes":
-                self.send_json(builtin_node_catalog())
+                self.send_json(discover_node_registry().catalog())
                 return
 
             file_path = static_file_path(self.path)
