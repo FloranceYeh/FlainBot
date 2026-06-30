@@ -93,7 +93,7 @@ def get_node_package() -> dict[str, Any]:
                                 "title": "Display Data",
                                 "description": "Formats text or raw JSON data for display.",
                                 "inputs": [port("text", "text"), port("json", "json")],
-                                "outputs": [port("text", "text"), port("json", "json")],
+                                "outputs": [],
                                 "defaults": {},
                             },
                             {

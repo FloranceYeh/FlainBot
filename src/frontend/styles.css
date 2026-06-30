@@ -628,6 +628,20 @@ main {
   gap: 8px;
 }
 
+.display-node-result {
+  min-height: 52px;
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--text);
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .field {
   display: grid;
   gap: 4px;

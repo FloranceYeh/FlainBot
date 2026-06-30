@@ -40,6 +40,7 @@
           :canvas-space-style="canvasSpaceStyle"
           :connection-drag="connectionDrag"
           :graph="graph"
+          :node-display-text="nodeDisplayText"
           :personas="personas"
           :preview-connection-path="previewConnectionPath"
           :providers="providers"
@@ -166,6 +167,7 @@ export default defineComponent({
     const messagesEl = ref(null);
     const messageInput = ref("");
     const messages = ref([]);
+    const latestNodeOutputs = ref({});
     const sessions = ref([{id: "default", title: "Default", contexts: []}]);
     const activeSessionId = ref("default");
     const connectionDrag = ref(null);
@@ -318,6 +320,7 @@ export default defineComponent({
       graph.edges = [];
       selectedId.value = null;
       connectionDrag.value = null;
+      latestNodeOutputs.value = {};
     }
 
     function toggleResultPanel() {
@@ -362,6 +365,7 @@ export default defineComponent({
       });
       graph.edges = config.edges || [];
       selectedId.value = graph.nodes[0]?.id ?? null;
+      latestNodeOutputs.value = {};
       nextTick(refreshEdgeLayout);
     }
 
@@ -809,6 +813,17 @@ export default defineComponent({
       return trace;
     }
 
+    function updateLatestNodeOutputs(trace = []) {
+      latestNodeOutputs.value = Object.fromEntries(
+        trace.map((item) => [item.node_id, item.outputs || {}]),
+      );
+    }
+
+    function nodeDisplayText(node) {
+      const outputs = latestNodeOutputs.value[node.id];
+      return outputs?.text || "";
+    }
+
     function appendMessage(role, text, trace = []) {
       messages.value.push({role, text, trace: renderTrace(trace)});
       nextTick(() => {
@@ -827,6 +842,7 @@ export default defineComponent({
       appendMessage("user", message);
       try {
         const payload = await sendChatMessage(message, activeSessionId.value);
+        updateLatestNodeOutputs(payload.trace || []);
         for (const reply of payload.replies || [payload.reply]) {
           appendMessage("assistant", reply, payload.trace);
         }
@@ -869,6 +885,7 @@ export default defineComponent({
       filterOptionValues,
       generatedPython,
       graph,
+      latestNodeOutputs,
       editPersona,
       editProvider,
       handleCanvasPointerMove,
@@ -898,6 +915,7 @@ export default defineComponent({
       providers,
       providerEditingId,
       providerForm,
+      nodeDisplayText,
       removeNode,
       removePersona,
       removeProvider,

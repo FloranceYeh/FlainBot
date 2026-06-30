@@ -259,19 +259,12 @@ class GraphConfigTests(unittest.TestCase):
             "nodes": [
                 {"id": "text_input_1", "type": "text_input", "props": {"text": "debug text"}},
                 {"id": "display_data_1", "type": "display_data", "props": {}},
-                {"id": "chat_output_1", "type": "chat_output", "props": {}},
             ],
             "edges": [
                 {
                     "from_node": "text_input_1",
                     "from_port": "text",
                     "to_node": "display_data_1",
-                    "to_port": "text",
-                },
-                {
-                    "from_node": "display_data_1",
-                    "from_port": "text",
-                    "to_node": "chat_output_1",
                     "to_port": "text",
                 },
             ],
@@ -282,7 +275,6 @@ class GraphConfigTests(unittest.TestCase):
 
         self.assertEqual(outputs["text_input_1"]["text"], "debug text")
         self.assertEqual(outputs["display_data_1"], {"text": "debug text", "json": "debug text"})
-        self.assertEqual(outputs["chat_output_1"]["reply"], "debug text")
 
     def test_build_graph_from_config_executes_session_context_node(self):
         config = {

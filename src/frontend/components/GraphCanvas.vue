@@ -88,6 +88,7 @@
                   </div>
                 </template>
               </form>
+              <pre v-if="node.type === 'display_data'" class="display-node-result">{{ nodeDisplayText(node) }}</pre>
             </div>
           </article>
         </div>
@@ -106,6 +107,7 @@ export default {
     canvasSpaceStyle: {type: Object, required: true},
     connectionDrag: {type: Object, default: null},
     graph: {type: Object, required: true},
+    nodeDisplayText: {type: Function, required: true},
     personas: {type: Array, required: true},
     previewConnectionPath: {type: String, required: true},
     providers: {type: Array, required: true},
