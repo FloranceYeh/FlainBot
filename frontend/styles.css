@@ -326,7 +326,6 @@ main {
 .node-preview {
   position: fixed;
   z-index: 40;
-  width: 300px;
   pointer-events: none;
 }
 
@@ -334,40 +333,11 @@ main {
   display: none;
 }
 
-.node-preview-card {
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 12px;
-  display: grid;
-  gap: 6px;
-  background: #ffffff;
+.preview-node {
+  position: static;
+  width: 270px;
   box-shadow: 0 12px 28px rgba(24, 32, 45, 0.18);
-}
-
-.node-preview h3,
-.node-preview p,
-.node-preview dl,
-.node-preview dd {
-  margin: 0;
-}
-
-.node-preview h3 {
-  font-size: 15px;
-}
-
-.node-preview dl {
-  display: grid;
-  gap: 4px;
-}
-
-.node-preview dt {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.node-preview dd {
-  font-size: 12px;
-  line-height: 1.35;
+  pointer-events: none;
 }
 
 .node-card button,

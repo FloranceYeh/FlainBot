@@ -123,6 +123,10 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("showNodePreview", js)
         self.assertIn("moveNodePreview", js)
         self.assertIn("hideNodePreview", js)
+        self.assertIn("graph-node preview-node", js)
+        self.assertIn("node-header", js)
+        self.assertIn("node-body", js)
+        self.assertIn("renderPorts", js)
         self.assertIn("mousemove", js)
         self.assertIn("mouseleave", js)
         self.assertIn("add-node-button", js)
@@ -171,7 +175,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn(".node-filters", css)
         self.assertIn(".node-preview", css)
         self.assertIn("position: fixed", css)
+        self.assertIn(".preview-node", css)
         self.assertNotIn(".node-card:hover .node-preview", css)
+        self.assertNotIn(".node-preview-card", css)
         self.assertIn(".add-node-button", css)
 
     def test_chat_view_is_in_single_index_shell(self):

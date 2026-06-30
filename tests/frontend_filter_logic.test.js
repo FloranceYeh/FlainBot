@@ -138,7 +138,11 @@ if (filtered.length !== 2) {
 const card = context.__testApi.renderNodeCard(catalog[0].items[0]);
 card.eventListeners.mouseenter({clientX: 100, clientY: 120});
 const preview = element("node-preview-popover");
-if (preview.hidden || !preview.innerHTML.includes("Prompt Builder")) {
+if (
+  preview.hidden
+  || !preview.innerHTML.includes("Prompt Builder")
+  || !preview.innerHTML.includes("graph-node preview-node")
+) {
   throw new Error("node hover should show a floating preview card");
 }
 

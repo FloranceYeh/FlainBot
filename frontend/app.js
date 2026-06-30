@@ -337,25 +337,32 @@ function renderCatalogItems(container, items, depth = 0) {
   });
 }
 
-function portList(ports) {
-  if (ports.length === 0) {
-    return "none";
-  }
-  return ports.map((port) => `${portName(port)}:${portType(port)}`).join(", ");
-}
-
 function nodePreview(node) {
+  const previewNode = {
+    ...node,
+    id: "preview",
+    props: cloneDefaults(node.defaults || {}),
+  };
   return `
-    <article class="node-preview-card">
-      <span class="node-type">${node.className} / ${node.packageTitle || node.packageId || node.package}</span>
-      <h3>${node.title}</h3>
-      <p>${node.description}</p>
-      <dl>
-        <dt>Inputs</dt>
-        <dd>${portList(node.inputs || [])}</dd>
-        <dt>Outputs</dt>
-        <dd>${portList(node.outputs || [])}</dd>
-      </dl>
+    <article class="graph-node preview-node">
+      <div class="node-header">
+        <span class="node-type">preview / ${node.className}</span>
+        <h3>${node.title}</h3>
+      </div>
+      <div class="node-body">
+        <p>${node.description}</p>
+        <div class="ports">
+          <div class="port-column">
+            <span class="port-title">Inputs</span>
+            ${renderPorts(previewNode, "input")}
+          </div>
+          <div class="port-column">
+            <span class="port-title">Outputs</span>
+            ${renderPorts(previewNode, "output")}
+          </div>
+        </div>
+        ${renderProperties(previewNode)}
+      </div>
     </article>
   `;
 }
