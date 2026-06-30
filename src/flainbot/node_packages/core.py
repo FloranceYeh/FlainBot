@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..builtins import ChatInputNode, ChatOutputNode, PersonaNode, PromptBuilderNode, SessionContextNode
+from ..builtins import (
+    ChatInputNode,
+    ChatOutputNode,
+    DisplayDataNode,
+    PersonaNode,
+    PromptBuilderNode,
+    SessionContextNode,
+    TextInputNode,
+)
 from ..node_registry import NodeBuildContext, NodeBuilder
 from ..providers import ProviderCallNode
 
@@ -64,6 +72,30 @@ def get_node_package() -> dict[str, Any]:
                         "id": "prompting",
                         "title": "Prompting",
                         "items": [
+                            {
+                                "kind": "node",
+                                "package": "core",
+                                "type": "text_input",
+                                "className": "TextInputNode",
+                                "title": "Text Input",
+                                "description": "Outputs manually configured text.",
+                                "inputs": [],
+                                "outputs": [port("text", "text")],
+                                "defaults": {
+                                    "text": "",
+                                },
+                            },
+                            {
+                                "kind": "node",
+                                "package": "core",
+                                "type": "display_data",
+                                "className": "DisplayDataNode",
+                                "title": "Display Data",
+                                "description": "Formats text or raw JSON data for display.",
+                                "inputs": [port("text", "text"), port("json", "json")],
+                                "outputs": [port("text", "text"), port("json", "json")],
+                                "defaults": {},
+                            },
                             {
                                 "kind": "node",
                                 "package": "core",
@@ -145,6 +177,8 @@ def get_node_builders() -> dict[str, NodeBuilder]:
     return {
         "chat_input": build_chat_input,
         "chat_output": build_chat_output,
+        "text_input": build_text_input,
+        "display_data": build_display_data,
         "session_context": build_session_context,
         "prompt_builder": build_prompt_builder,
         "persona": build_persona,
@@ -158,6 +192,14 @@ def build_chat_input(node_config: dict[str, Any], context: NodeBuildContext) -> 
 
 def build_chat_output(node_config: dict[str, Any], context: NodeBuildContext) -> ChatOutputNode:
     return ChatOutputNode()
+
+
+def build_text_input(node_config: dict[str, Any], context: NodeBuildContext) -> TextInputNode:
+    return TextInputNode(node_config.get("props", {}).get("text", ""))
+
+
+def build_display_data(node_config: dict[str, Any], context: NodeBuildContext) -> DisplayDataNode:
+    return DisplayDataNode()
 
 
 def build_session_context(

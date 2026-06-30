@@ -24,6 +24,28 @@ class ChatOutputNode:
         return {"reply": inputs["text"]}
 
 
+class TextInputNode:
+    name = "text_input"
+
+    def __init__(self, text: str = "") -> None:
+        self.text = text
+
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        return {"text": self.text}
+
+
+class DisplayDataNode:
+    name = "display_data"
+
+    def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        raw = inputs["json"] if "json" in inputs else inputs.get("text", "")
+        if isinstance(raw, str):
+            text = raw
+        else:
+            text = json.dumps(raw, ensure_ascii=False, indent=2)
+        return {"text": text, "json": raw}
+
+
 class SessionContextNode:
     name = "session_context"
 

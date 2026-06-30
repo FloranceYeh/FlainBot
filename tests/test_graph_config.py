@@ -4,7 +4,17 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import ChatInputNode, ChatOutputNode, GraphExecutor, PersonaNode, PromptBuilderNode, ProviderCallNode, SessionContextNode
+from flainbot import (
+    ChatInputNode,
+    ChatOutputNode,
+    DisplayDataNode,
+    GraphExecutor,
+    PersonaNode,
+    PromptBuilderNode,
+    ProviderCallNode,
+    SessionContextNode,
+    TextInputNode,
+)
 from flainbot.config import build_graph_from_config
 
 
@@ -12,6 +22,18 @@ class GraphConfigTests(unittest.TestCase):
     def test_chat_boundary_nodes_pass_message_to_reply(self):
         self.assertEqual(ChatInputNode("hello").run({}), {"text": "hello"})
         self.assertEqual(ChatOutputNode().run({"text": "reply"}), {"reply": "reply"})
+
+    def test_text_input_node_outputs_configured_text(self):
+        self.assertEqual(TextInputNode("manual text").run({}), {"text": "manual text"})
+
+    def test_display_data_node_outputs_text_and_raw_json(self):
+        node = DisplayDataNode()
+
+        self.assertEqual(node.run({"text": "plain"}), {"text": "plain", "json": "plain"})
+        self.assertEqual(
+            node.run({"json": {"answer": "ok"}}),
+            {"text": '{\n  "answer": "ok"\n}', "json": {"answer": "ok"}},
+        )
 
     def test_prompt_builder_outputs_json_payload(self):
         node = PromptBuilderNode(
@@ -231,6 +253,36 @@ class GraphConfigTests(unittest.TestCase):
                 "contexts": [],
             },
         )
+
+    def test_build_graph_from_config_executes_text_input_and_display_data_nodes(self):
+        config = {
+            "nodes": [
+                {"id": "text_input_1", "type": "text_input", "props": {"text": "debug text"}},
+                {"id": "display_data_1", "type": "display_data", "props": {}},
+                {"id": "chat_output_1", "type": "chat_output", "props": {}},
+            ],
+            "edges": [
+                {
+                    "from_node": "text_input_1",
+                    "from_port": "text",
+                    "to_node": "display_data_1",
+                    "to_port": "text",
+                },
+                {
+                    "from_node": "display_data_1",
+                    "from_port": "text",
+                    "to_node": "chat_output_1",
+                    "to_port": "text",
+                },
+            ],
+        }
+
+        graph = build_graph_from_config(config, message="")
+        outputs = GraphExecutor(graph).run()
+
+        self.assertEqual(outputs["text_input_1"]["text"], "debug text")
+        self.assertEqual(outputs["display_data_1"], {"text": "debug text", "json": "debug text"})
+        self.assertEqual(outputs["chat_output_1"]["reply"], "debug text")
 
     def test_build_graph_from_config_executes_session_context_node(self):
         config = {
