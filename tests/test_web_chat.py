@@ -1,10 +1,13 @@
 from pathlib import Path
+from contextlib import redirect_stdout
+import io
 import sys
 from urllib import request
 import json
 import unittest
 from http.server import ThreadingHTTPServer
 import threading
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -112,6 +115,36 @@ class WebChatTests(unittest.TestCase):
         finally:
             server.shutdown()
             server.server_close()
+
+    def test_parse_args_does_not_require_provider(self):
+        args = web_chat.parse_args([])
+
+        self.assertEqual(args.host, "127.0.0.1")
+        self.assertEqual(args.port, 8765)
+
+    def test_main_starts_with_empty_graph_config(self):
+        stdout = io.StringIO()
+        captured = {}
+
+        class FakeServer:
+            server_port = 8765
+
+            def __init__(self, address, handler):
+                captured["address"] = address
+                captured["handler"] = handler
+
+            def serve_forever(self):
+                return None
+
+        with patch("scripts.web_chat.ThreadingHTTPServer", FakeServer):
+            with redirect_stdout(stdout):
+                result = web_chat.main([])
+
+        handler = captured["handler"]
+        self.assertEqual(result, 0)
+        self.assertEqual(captured["address"], ("127.0.0.1", 8765))
+        self.assertEqual(handler.store.load(), {"nodes": [], "edges": []})
+        self.assertIn("http://127.0.0.1:8765/", stdout.getvalue())
 
 
 if __name__ == "__main__":
