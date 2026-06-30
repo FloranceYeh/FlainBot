@@ -1,10 +1,10 @@
 import {
+  connectionArrow,
   connectionPath,
   filterNodeCatalog,
   filterOptions,
   flattenNodeCatalog,
   generatePython,
-  portAnchor,
 } from "../src/frontend/graph.js";
 
 const catalog = [
@@ -122,20 +122,11 @@ if (!externalPython.includes("meow_before_punctuation") || externalPython.includ
 }
 
 const pathWithMidpoint = connectionPath({x: 10, y: 20}, {x: 210, y: 120});
-if (!pathWithMidpoint.includes(" 110 70 C ")) {
-  throw new Error("connection path should include a midpoint vertex for centered arrows");
+if (!pathWithMidpoint.startsWith("M 10 20 C ") || (pathWithMidpoint.match(/ C /g) || []).length !== 1) {
+  throw new Error("connection path should be one smooth cubic curve");
 }
 
-const outputAnchor = portAnchor(
-  {x: 30, y: 40, inputs: [], outputs: [{name: "reply", type: "text"}]},
-  "reply",
-  "output",
-);
-const movedOutputAnchor = portAnchor(
-  {x: 70, y: 90, inputs: [], outputs: [{name: "reply", type: "text"}]},
-  "reply",
-  "output",
-);
-if (movedOutputAnchor.x - outputAnchor.x !== 40 || movedOutputAnchor.y - outputAnchor.y !== 50) {
-  throw new Error("port anchors should move with node coordinates");
+const arrow = connectionArrow({x: 10, y: 20}, {x: 210, y: 120});
+if (arrow.x !== 110 || arrow.y !== 70 || !Number.isFinite(arrow.angle)) {
+  throw new Error("connection arrow should be positioned at the smooth curve midpoint");
 }

@@ -95,17 +95,18 @@
           >
             <div id="canvas-space" class="canvas-space" data-canvas-space :style="canvasSpaceStyle">
               <svg id="edge-layer" class="edge-layer">
-                <defs>
-                  <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="5" refY="3.5" orient="auto">
-                    <polygon points="0 0, 10 3.5, 0 7"></polygon>
-                  </marker>
-                </defs>
                 <path
                   v-for="edge in renderedEdges"
                   :key="edge.key"
                   :d="edge.d"
-                  marker-mid="url(#arrowhead)"
                 ></path>
+                <polygon
+                  v-for="edge in renderedEdges"
+                  :key="`${edge.key}:arrow`"
+                  class="edge-arrow"
+                  points="-6 -4, 6 0, -6 4"
+                  :transform="`translate(${edge.arrow.x} ${edge.arrow.y}) rotate(${edge.arrow.angle})`"
+                ></polygon>
                 <circle
                   v-for="edge in renderedEdges"
                   :key="`${edge.key}:from`"
@@ -376,13 +377,13 @@ import {
 } from "./api.js";
 import {
   cloneDefaults,
+  connectionArrow,
   connectionPath,
   filterNodeCatalog,
   filterOptions,
   flattenNodeCatalog,
   generatePython,
   parseJsonOrEmpty,
-  portAnchor,
   portName,
   portType,
 } from "./graph.js";
@@ -492,6 +493,7 @@ export default defineComponent({
     const messageInput = ref("");
     const messages = ref([]);
     const connectionDrag = ref(null);
+    const edgeLayoutTick = ref(0);
     const dragState = ref(null);
     const canvasPanState = ref(null);
     const nodePreview = reactive({visible: false, node: null, left: 0, top: 0});
@@ -553,14 +555,15 @@ export default defineComponent({
       return connectionPath(from, to);
     });
     const renderedEdges = computed(() => graph.edges.map((edge, index) => {
+      edgeLayoutTick.value;
       const fromNode = findNode(edge.from_node);
       const toNode = findNode(edge.to_node);
       if (!fromNode || !toNode) {
         return null;
       }
-      const from = portAnchor(fromNode, edge.from_port, "output");
-      const to = portAnchor(toNode, edge.to_port, "input");
-      return {key: edgeKey(edge, index), index, from, to, d: connectionPath(from, to)};
+      const from = portCenter(edge.from_node, edge.from_port, "output");
+      const to = portCenter(edge.to_node, edge.to_port, "input");
+      return {key: edgeKey(edge, index), index, from, to, d: connectionPath(from, to), arrow: connectionArrow(from, to)};
     }).filter(Boolean));
 
     function setStatus(message, type = "") {
@@ -610,10 +613,12 @@ export default defineComponent({
       if (selectedId.value === id) {
         selectedId.value = graph.nodes[0]?.id ?? null;
       }
+      refreshEdgeLayout();
     }
 
     function removeEdgeAt(index) {
       graph.edges = graph.edges.filter((edge, edgeIndex) => edgeIndex !== index);
+      refreshEdgeLayout();
     }
 
     function updateProperty(id, key, value) {
@@ -764,8 +769,11 @@ export default defineComponent({
     }
 
     function anchorForPort(nodeId, port, direction) {
-      const node = findNode(nodeId);
-      return node ? portAnchor(node, port, direction) : portCenter(nodeId, port, direction);
+      return portCenter(nodeId, port, direction);
+    }
+
+    function refreshEdgeLayout() {
+      edgeLayoutTick.value += 1;
     }
 
     function canvasPointFromEvent(event) {
@@ -797,6 +805,7 @@ export default defineComponent({
       const node = graph.nodes.find((item) => item.id === dragState.value.nodeId);
       node.x = Math.max(0, dragState.value.originX + event.clientX - dragState.value.startX);
       node.y = Math.max(0, dragState.value.originY + event.clientY - dragState.value.startY);
+      nextTick(refreshEdgeLayout);
     }
 
     function dragEnd() {
@@ -806,6 +815,7 @@ export default defineComponent({
     function zoomCanvas(event) {
       const delta = event.deltaY > 0 ? -0.08 : 0.08;
       viewportState.scale = Math.min(1.8, Math.max(0.45, viewportState.scale + delta));
+      nextTick(refreshEdgeLayout);
     }
 
     function startCanvasPan(event) {
@@ -827,6 +837,7 @@ export default defineComponent({
       }
       viewportState.x = canvasPanState.value.originX + event.clientX - canvasPanState.value.startX;
       viewportState.y = canvasPanState.value.originY + event.clientY - canvasPanState.value.startY;
+      nextTick(refreshEdgeLayout);
     }
 
     function endCanvasPan() {
@@ -932,6 +943,7 @@ export default defineComponent({
         const to = connectionDrag.value.direction === "output" ? target.dataset : connectionDrag.value;
         if (from.nodeId && from.port && to.nodeId && to.port && from.nodeId !== to.nodeId) {
           graph.edges.push({from_node: from.nodeId, from_port: from.port, to_node: to.nodeId, to_port: to.port});
+          nextTick(refreshEdgeLayout);
         }
       }
       connectionDrag.value = null;

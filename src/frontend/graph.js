@@ -14,21 +14,6 @@ export function portsText(ports) {
   return ports.map((port) => `${portName(port)} ${portType(port)}`).join(" ");
 }
 
-export const NODE_WIDTH = 270;
-export const NODE_INPUT_X = 16;
-export const NODE_OUTPUT_X = NODE_WIDTH - 16;
-export const NODE_PORT_TOP = 113;
-export const NODE_PORT_GAP = 34;
-
-export function portAnchor(node, targetPort, direction) {
-  const ports = direction === "input" ? node.inputs || [] : node.outputs || [];
-  const index = Math.max(0, ports.findIndex((port) => portName(port) === targetPort));
-  return {
-    x: node.x + (direction === "input" ? NODE_INPUT_X : NODE_OUTPUT_X),
-    y: node.y + NODE_PORT_TOP + index * NODE_PORT_GAP,
-  };
-}
-
 export function collectCatalogNodes(items, packageInfo = {}) {
   return items.flatMap((item) => {
     if (item.kind === "node") {
@@ -129,11 +114,46 @@ export function filterNodeCatalog(nodeCatalog, query, filters) {
 
 export function connectionPath(from, to) {
   const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
-  const midpoint = {
-    x: (from.x + to.x) / 2,
-    y: (from.y + to.y) / 2,
+  return `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
+}
+
+export function connectionArrow(from, to) {
+  const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
+  const point = cubicPoint(
+    from,
+    {x: from.x + curve, y: from.y},
+    {x: to.x - curve, y: to.y},
+    to,
+    0.5,
+  );
+  const tangent = cubicTangent(
+    from,
+    {x: from.x + curve, y: from.y},
+    {x: to.x - curve, y: to.y},
+    to,
+    0.5,
+  );
+  return {
+    x: point.x,
+    y: point.y,
+    angle: Math.atan2(tangent.y, tangent.x) * 180 / Math.PI,
   };
-  return `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${midpoint.x - curve / 2} ${midpoint.y}, ${midpoint.x} ${midpoint.y} C ${midpoint.x + curve / 2} ${midpoint.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
+}
+
+function cubicPoint(start, controlA, controlB, end, t) {
+  const mt = 1 - t;
+  return {
+    x: mt ** 3 * start.x + 3 * mt ** 2 * t * controlA.x + 3 * mt * t ** 2 * controlB.x + t ** 3 * end.x,
+    y: mt ** 3 * start.y + 3 * mt ** 2 * t * controlA.y + 3 * mt * t ** 2 * controlB.y + t ** 3 * end.y,
+  };
+}
+
+function cubicTangent(start, controlA, controlB, end, t) {
+  const mt = 1 - t;
+  return {
+    x: 3 * mt ** 2 * (controlA.x - start.x) + 6 * mt * t * (controlB.x - controlA.x) + 3 * t ** 2 * (end.x - controlB.x),
+    y: 3 * mt ** 2 * (controlA.y - start.y) + 6 * mt * t * (controlB.y - controlA.y) + 3 * t ** 2 * (end.y - controlB.y),
+  };
 }
 
 export function quote(value) {

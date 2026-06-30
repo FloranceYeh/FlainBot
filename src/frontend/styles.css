@@ -492,11 +492,11 @@ main {
 .edge-layer .preview-connection {
   stroke-dasharray: 7 5;
   opacity: 0.76;
-  marker-mid: none;
 }
 
-.edge-layer polygon {
+.edge-layer .edge-arrow {
   fill: var(--accent);
+  pointer-events: none;
 }
 
 .edge-layer .edge-handle {
