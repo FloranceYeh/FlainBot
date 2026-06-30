@@ -73,6 +73,7 @@
         :active="activeView === 'providers'"
         :provider-form="providerForm"
         :providers="providers"
+        @edit="editProvider"
         @remove="removeProvider"
         @submit="handleProviderSubmit"
       />
@@ -80,6 +81,7 @@
         :active="activeView === 'personas'"
         :persona-form="personaForm"
         :personas="personas"
+        @edit="editPersona"
         @remove="removePersona"
         @submit="handlePersonaSubmit"
       />
@@ -160,6 +162,8 @@ export default defineComponent({
     const dragState = ref(null);
     const canvasPanState = ref(null);
     const nodePreview = reactive({visible: false, node: null, left: 0, top: 0});
+    const providerEditingId = ref("");
+    const personaEditingId = ref("");
     const providerForm = reactive({id: "", format: "openai_chat", base_url: "", api_key: "", model: ""});
     const personaForm = reactive({
       persona_id: "",
@@ -369,10 +373,11 @@ export default defineComponent({
         api_key: providerForm.api_key,
         model: providerForm.model.trim(),
       };
-      providers.value = providers.value.filter((item) => item.id !== provider.id);
+      providers.value = providers.value.filter((item) => item.id !== (providerEditingId.value || provider.id));
       providers.value.push(provider);
       try {
         await saveProviders(providers.value);
+        providerEditingId.value = "";
         Object.assign(providerForm, {id: "", format: "openai_chat", base_url: "", api_key: "", model: ""});
         form.reset();
         setStatus("Provider saved.", "success");
@@ -381,8 +386,23 @@ export default defineComponent({
       }
     }
 
+    function editProvider(provider) {
+      providerEditingId.value = provider.id;
+      Object.assign(providerForm, {
+        id: provider.id,
+        format: provider.format,
+        base_url: provider.base_url,
+        api_key: provider.api_key,
+        model: provider.model,
+      });
+    }
+
     async function removeProvider(id) {
       providers.value = providers.value.filter((item) => item.id !== id);
+      if (providerEditingId.value === id) {
+        providerEditingId.value = "";
+        Object.assign(providerForm, {id: "", format: "openai_chat", base_url: "", api_key: "", model: ""});
+      }
       await saveProviders(providers.value);
     }
 
@@ -397,9 +417,10 @@ export default defineComponent({
           skills: parseJsonOrEmpty(personaForm.skills_json, []),
           custom_error_message: personaForm.custom_error_message.trim() || null,
         };
-        personas.value = personas.value.filter((item) => item.persona_id !== persona.persona_id);
+        personas.value = personas.value.filter((item) => item.persona_id !== (personaEditingId.value || persona.persona_id));
         personas.value.push(persona);
         await savePersonas(personas.value);
+        personaEditingId.value = "";
         Object.assign(personaForm, {
           persona_id: "",
           system_prompt: "",
@@ -415,8 +436,31 @@ export default defineComponent({
       }
     }
 
+    function editPersona(persona) {
+      personaEditingId.value = persona.persona_id;
+      Object.assign(personaForm, {
+        persona_id: persona.persona_id,
+        system_prompt: persona.system_prompt,
+        begin_dialogs: persona.begin_dialogs.join("\n"),
+        tools_json: JSON.stringify(persona.tools || [], null, 2),
+        skills_json: JSON.stringify(persona.skills || [], null, 2),
+        custom_error_message: persona.custom_error_message || "",
+      });
+    }
+
     async function removePersona(personaId) {
       personas.value = personas.value.filter((item) => item.persona_id !== personaId);
+      if (personaEditingId.value === personaId) {
+        personaEditingId.value = "";
+        Object.assign(personaForm, {
+          persona_id: "",
+          system_prompt: "",
+          begin_dialogs: "",
+          tools_json: "",
+          skills_json: "",
+          custom_error_message: "",
+        });
+      }
       await savePersonas(personas.value);
     }
 
@@ -714,6 +758,8 @@ export default defineComponent({
       filterOptionValues,
       generatedPython,
       graph,
+      editPersona,
+      editProvider,
       handleCanvasPointerMove,
       handleCanvasPointerUp,
       handleCanvasDrop,
@@ -732,10 +778,12 @@ export default defineComponent({
       nodePreviewStyle,
       nodeSearch,
       personas,
+      personaEditingId,
       personaForm,
       previewConnectionPath,
       previewNode,
       providers,
+      providerEditingId,
       providerForm,
       removeNode,
       removePersona,

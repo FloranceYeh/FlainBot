@@ -713,6 +713,12 @@ main {
   -webkit-box-orient: vertical;
 }
 
+.card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
 .danger {
   color: var(--danger);
 }

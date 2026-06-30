@@ -45,7 +45,10 @@
             <h3>{{ persona.persona_id }}</h3>
             <p>{{ persona.system_prompt }}</p>
           </div>
-          <button type="button" class="danger" :data-remove-persona="persona.persona_id" @click="$emit('remove', persona.persona_id)">Remove</button>
+          <div class="card-actions">
+            <button type="button" :data-edit-persona="persona.persona_id" @click="$emit('edit', persona)">Edit</button>
+            <button type="button" class="danger" :data-remove-persona="persona.persona_id" @click="$emit('remove', persona.persona_id)">Remove</button>
+          </div>
         </article>
       </div>
     </section>
@@ -60,6 +63,6 @@ export default {
     personaForm: {type: Object, required: true},
     personas: {type: Array, required: true},
   },
-  emits: ["remove", "submit"],
+  emits: ["edit", "remove", "submit"],
 };
 </script>

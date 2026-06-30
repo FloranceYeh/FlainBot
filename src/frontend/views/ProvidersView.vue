@@ -44,7 +44,10 @@
             <h3>{{ provider.id }}</h3>
             <p>{{ provider.base_url }} / {{ provider.model }}</p>
           </div>
-          <button type="button" class="danger" :data-remove-provider="provider.id" @click="$emit('remove', provider.id)">Remove</button>
+          <div class="card-actions">
+            <button type="button" :data-edit-provider="provider.id" @click="$emit('edit', provider)">Edit</button>
+            <button type="button" class="danger" :data-remove-provider="provider.id" @click="$emit('remove', provider.id)">Remove</button>
+          </div>
         </article>
       </div>
     </section>
@@ -59,6 +62,6 @@ export default {
     providerForm: {type: Object, required: true},
     providers: {type: Array, required: true},
   },
-  emits: ["remove", "submit"],
+  emits: ["edit", "remove", "submit"],
 };
 </script>

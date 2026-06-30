@@ -454,9 +454,11 @@ class WebChatTests(unittest.TestCase):
             def serve_forever(self):
                 return None
 
-        with patch("scripts.web_chat.ThreadingHTTPServer", FakeServer):
-            with redirect_stdout(stdout):
-                result = web_chat.main([])
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = Path(tmpdir) / "flainbot_state.json"
+            with patch("scripts.web_chat.ThreadingHTTPServer", FakeServer):
+                with redirect_stdout(stdout):
+                    result = web_chat.main(["--data-file", str(data_file)])
 
         handler = captured["handler"]
         self.assertEqual(result, 0)
