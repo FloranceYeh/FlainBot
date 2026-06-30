@@ -453,7 +453,7 @@ export default defineComponent({
   name: "App",
   components: {CatalogGroup, NodeCard, PortList},
   setup() {
-    let nodeCatalog = [];
+    const nodeCatalog = ref([]);
     const flatNodeCatalog = ref([]);
     const graph = reactive({nodes: [], edges: []});
     const providers = ref([]);
@@ -510,7 +510,7 @@ export default defineComponent({
       return selectedCount === 0 ? "Filters" : `Filters (${selectedCount})`;
     });
 
-    const filteredCatalog = computed(() => filterNodeCatalog(nodeCatalog, nodeSearch.value.trim().toLowerCase(), filters.value));
+    const filteredCatalog = computed(() => filterNodeCatalog(nodeCatalog.value, nodeSearch.value.trim().toLowerCase(), filters.value));
     const generatedPython = computed(() => generatePython(graph, providers.value, personas.value));
     const canvasSpaceStyle = computed(() => ({
       transform: `translate(${viewportState.x}px, ${viewportState.y}px) scale(${viewportState.scale})`,
@@ -911,8 +911,8 @@ export default defineComponent({
 
     async function init() {
       try {
-        nodeCatalog = await loadNodeCatalog();
-        flatNodeCatalog.value = flattenNodeCatalog(nodeCatalog);
+        nodeCatalog.value = await loadNodeCatalog();
+        flatNodeCatalog.value = flattenNodeCatalog(nodeCatalog.value);
         providers.value = await loadProviders();
         personas.value = await loadPersonas();
       } catch (error) {
