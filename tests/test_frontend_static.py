@@ -238,6 +238,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn(".node-preview .preview-node", css)
         self.assertIn(".node-remove-dot", css)
         self.assertIn("border-radius: 50%", css)
+        self.assertIn("min-height: 12px", css)
         self.assertNotIn("node-remove-triangle", css)
         self.assertNotIn("clip-path: polygon(50% 0, 0 100%, 100% 100%)", css)
         self.assertIn("top: 9px", css)
