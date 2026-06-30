@@ -21,6 +21,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "graph.js").exists())
         vite_config = (ROOT / "vite.config.js").read_text(encoding="utf-8")
         self.assertIn("@vitejs/plugin-vue", vite_config)
+        self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
         self.assertIn("outDir: \"frontend/dist\"", vite_config)
 
     def test_planner_page_references_assets_and_nodes(self):
