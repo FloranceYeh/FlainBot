@@ -47,6 +47,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("data-filter-label=\"Package\"", html)
         self.assertIn("data-filter-label=\"Input type\"", html)
         self.assertIn("data-filter-label=\"Output type\"", html)
+        self.assertNotIn("details class=\"filter-dropdown\" open", html)
         self.assertNotIn("<select id=\"package-filter\"", html)
         self.assertNotIn("<select id=\"input-type-filter\"", html)
         self.assertNotIn("<select id=\"output-type-filter\"", html)
@@ -111,6 +112,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("portName", js)
         self.assertIn("portType", js)
         self.assertIn("portsText", js)
+        self.assertIn("nodePreview", js)
+        self.assertIn("node-preview", js)
+        self.assertIn("add-node-button", js)
         self.assertIn("packageId", js)
         self.assertIn("packageTitle", js)
         self.assertIn("data-port-type", js)
@@ -154,6 +158,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("event.preventDefault()", js)
         css = (ROOT / "frontend" / "styles.css").read_text(encoding="utf-8")
         self.assertIn(".node-filters", css)
+        self.assertIn(".node-preview", css)
+        self.assertIn(".node-card:hover .node-preview", css)
+        self.assertIn(".add-node-button", css)
 
     def test_chat_view_is_in_single_index_shell(self):
         html = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")

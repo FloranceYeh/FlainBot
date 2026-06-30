@@ -292,6 +292,7 @@ main {
 }
 
 .node-card {
+  position: relative;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 12px;
@@ -309,6 +310,42 @@ main {
   line-height: 1.45;
 }
 
+.node-preview {
+  display: none;
+  margin: 10px 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.node-card:hover .node-preview,
+.node-card:focus-within .node-preview {
+  display: grid;
+  gap: 6px;
+}
+
+.node-preview p,
+.node-preview dl,
+.node-preview dd {
+  margin: 0;
+}
+
+.node-preview dl {
+  display: grid;
+  gap: 4px;
+}
+
+.node-preview dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.node-preview dd {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .node-card button,
 #save-graph,
 #copy-code {
@@ -323,6 +360,12 @@ main {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
   color: #ffffff;
+}
+
+.add-node-button {
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 12px;
 }
 
 .graph-canvas {

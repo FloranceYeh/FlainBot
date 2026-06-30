@@ -331,6 +331,28 @@ function renderCatalogItems(container, items, depth = 0) {
   });
 }
 
+function portList(ports) {
+  if (ports.length === 0) {
+    return "none";
+  }
+  return ports.map((port) => `${portName(port)}:${portType(port)}`).join(", ");
+}
+
+function nodePreview(node) {
+  return `
+    <div class="node-preview" role="tooltip">
+      <span class="node-type">${node.packageTitle || node.packageId || node.package}</span>
+      <p>${node.description}</p>
+      <dl>
+        <dt>Inputs</dt>
+        <dd>${portList(node.inputs || [])}</dd>
+        <dt>Outputs</dt>
+        <dd>${portList(node.outputs || [])}</dd>
+      </dl>
+    </div>
+  `;
+}
+
 function renderNodeCard(node) {
   const card = document.createElement("article");
   card.className = "node-card";
@@ -338,7 +360,8 @@ function renderNodeCard(node) {
     <span class="node-type">${node.className}</span>
     <h4>${node.title}</h4>
     <p>${node.description}</p>
-    <button type="button">Add node</button>
+    ${nodePreview(node)}
+    <button type="button" class="add-node-button">Add node</button>
   `;
   card.querySelector("button").addEventListener("click", () => addNode(node.type));
   return card;
