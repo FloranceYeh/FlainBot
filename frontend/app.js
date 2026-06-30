@@ -11,9 +11,12 @@ let resultRailCollapsed = true;
 
 const libraryEl = document.getElementById("node-library");
 const nodeSearchEl = document.getElementById("node-search");
-const packageFilterEl = document.getElementById("package-filter");
-const inputTypeFilterEl = document.getElementById("input-type-filter");
-const outputTypeFilterEl = document.getElementById("output-type-filter");
+const packageFilterOptionsEl = document.getElementById("package-filter-options");
+const inputTypeFilterOptionsEl = document.getElementById("input-type-filter-options");
+const outputTypeFilterOptionsEl = document.getElementById("output-type-filter-options");
+const packageFilterSummaryEl = document.getElementById("package-filter-summary");
+const inputTypeFilterSummaryEl = document.getElementById("input-type-filter-summary");
+const outputTypeFilterSummaryEl = document.getElementById("output-type-filter-summary");
 const canvasEl = document.getElementById("graph-canvas");
 const canvasSpaceEl = document.getElementById("canvas-space");
 const nodeLayerEl = document.getElementById("node-layer");
@@ -184,32 +187,58 @@ function filterOptions(nodes, portDirection) {
   )))].sort();
 }
 
-function renderFilterOptions(selectEl, values, defaultLabel) {
-  const current = selectEl.value;
-  selectEl.innerHTML = `<option value="">${defaultLabel}</option>`;
+function checkboxId(container, value) {
+  return `${container.id}-${value.replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
+function selectedFilterValues(container) {
+  return Array.from(container.querySelectorAll("input:checked")).map((input) => input.value);
+}
+
+function updateFilterSummary(summaryEl, selectedValues, defaultLabel) {
+  if (selectedValues.length === 0) {
+    summaryEl.textContent = defaultLabel;
+    return;
+  }
+  summaryEl.textContent = selectedValues.length === 1 ? selectedValues[0] : `${selectedValues.length} selected`;
+}
+
+function renderFilterOptions(container, summaryEl, values, defaultLabel) {
+  const current = new Set(selectedFilterValues(container));
+  container.innerHTML = "";
   values.forEach((value) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    selectEl.appendChild(option);
+    const id = checkboxId(container, value);
+    const label = document.createElement("label");
+    label.className = "filter-option";
+    label.innerHTML = `
+      <input id="${id}" type="checkbox" value="${value}" ${current.has(value) ? "checked" : ""}>
+      <span>${value}</span>
+    `;
+    container.appendChild(label);
   });
-  selectEl.value = values.includes(current) ? current : "";
+  updateFilterSummary(summaryEl, selectedFilterValues(container), defaultLabel);
 }
 
 function renderNodeFilters() {
-  renderFilterOptions(packageFilterEl, filterOptions(flatNodeCatalog, "package"), "All packages");
-  renderFilterOptions(inputTypeFilterEl, filterOptions(flatNodeCatalog, "input"), "All input types");
-  renderFilterOptions(outputTypeFilterEl, filterOptions(flatNodeCatalog, "output"), "All output types");
+  renderFilterOptions(packageFilterOptionsEl, packageFilterSummaryEl, filterOptions(flatNodeCatalog, "package"), "All packages");
+  renderFilterOptions(inputTypeFilterOptionsEl, inputTypeFilterSummaryEl, filterOptions(flatNodeCatalog, "input"), "All input types");
+  renderFilterOptions(outputTypeFilterOptionsEl, outputTypeFilterSummaryEl, filterOptions(flatNodeCatalog, "output"), "All output types");
 }
 
 function nodeMatchesFilters(node, filters) {
-  if (filters.selectedPackage && (node.packageId || node.package) !== filters.selectedPackage) {
+  if (filters.selectedPackage.length > 0 && !filters.selectedPackage.includes(node.packageId || node.package)) {
     return false;
   }
-  if (filters.selectedInputType && !(node.inputs || []).some((port) => portType(port) === filters.selectedInputType)) {
+  if (
+    filters.selectedInputType.length > 0
+    && !(node.inputs || []).some((port) => filters.selectedInputType.includes(portType(port)))
+  ) {
     return false;
   }
-  if (filters.selectedOutputType && !(node.outputs || []).some((port) => portType(port) === filters.selectedOutputType)) {
+  if (
+    filters.selectedOutputType.length > 0
+    && !(node.outputs || []).some((port) => filters.selectedOutputType.includes(portType(port)))
+  ) {
     return false;
   }
   return true;
@@ -252,11 +281,11 @@ function filterCatalogItems(items, query, filters) {
 function filterNodeCatalog() {
   const query = nodeSearchEl.value.trim().toLowerCase();
   const filters = {
-    selectedPackage: packageFilterEl.value,
-    selectedInputType: inputTypeFilterEl.value,
-    selectedOutputType: outputTypeFilterEl.value,
+    selectedPackage: selectedFilterValues(packageFilterOptionsEl),
+    selectedInputType: selectedFilterValues(inputTypeFilterOptionsEl),
+    selectedOutputType: selectedFilterValues(outputTypeFilterOptionsEl),
   };
-  const hasFilters = filters.selectedPackage || filters.selectedInputType || filters.selectedOutputType;
+  const hasFilters = filters.selectedPackage.length > 0 || filters.selectedInputType.length > 0 || filters.selectedOutputType.length > 0;
   if (!query && !hasFilters) {
     return nodeCatalog;
   }
@@ -405,7 +434,7 @@ function renderProperties(node) {
       ${entries.map(([key, value]) => `
         <div class="field">
           <label>${key}</label>
-          <input data-prop-key="${key}" value="${value}" ${key === "api_key" ? 'type="password"' : ""}>
+          <input data-prop-key="${key}" value="${value}">
         </div>
       `).join("")}
     </form>
@@ -838,9 +867,18 @@ providerFormEl.addEventListener("submit", async (event) => {
 });
 
 nodeSearchEl.addEventListener("input", renderLibrary);
-packageFilterEl.addEventListener("change", renderLibrary);
-inputTypeFilterEl.addEventListener("change", renderLibrary);
-outputTypeFilterEl.addEventListener("change", renderLibrary);
+packageFilterOptionsEl.addEventListener("change", () => {
+  updateFilterSummary(packageFilterSummaryEl, selectedFilterValues(packageFilterOptionsEl), "All packages");
+  renderLibrary();
+});
+inputTypeFilterOptionsEl.addEventListener("change", () => {
+  updateFilterSummary(inputTypeFilterSummaryEl, selectedFilterValues(inputTypeFilterOptionsEl), "All input types");
+  renderLibrary();
+});
+outputTypeFilterOptionsEl.addEventListener("change", () => {
+  updateFilterSummary(outputTypeFilterSummaryEl, selectedFilterValues(outputTypeFilterOptionsEl), "All output types");
+  renderLibrary();
+});
 resultPanelToggleEl.addEventListener("click", toggleResultPanel);
 
 document.getElementById("copy-code").addEventListener("click", async () => {

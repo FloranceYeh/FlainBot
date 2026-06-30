@@ -189,7 +189,6 @@ main {
 }
 
 .shelf-header input,
-.node-filters select,
 .field select {
   width: 100%;
   min-height: 34px;
@@ -203,14 +202,54 @@ main {
   gap: 8px;
 }
 
-.node-filters label {
-  display: grid;
-  gap: 4px;
+.filter-dropdown {
+  position: relative;
 }
 
-.node-filters span {
+.filter-dropdown summary {
+  min-height: 34px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  list-style: none;
+}
+
+.filter-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-dropdown summary::after {
+  content: "v";
+  float: right;
   color: var(--muted);
-  font-size: 12px;
+}
+
+.filter-options {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  margin-top: 4px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.filter-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.filter-option span {
+  color: var(--muted);
 }
 
 .node-package {

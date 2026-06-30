@@ -11,6 +11,8 @@ function element(id) {
       value: "",
       innerHTML: "",
       textContent: "",
+      checked: false,
+      type: "",
       className: "",
       classList: {toggle() {}, remove() {}, add() {}},
       dataset: {},
@@ -19,7 +21,14 @@ function element(id) {
       addEventListener() {},
       setAttribute() {},
       querySelector() { return element(`${id}-child`); },
-      querySelectorAll() { return []; },
+      querySelectorAll(selector) {
+        if (selector !== "input:checked") {
+          return [];
+        }
+        return Array.from(elements.values()).filter((item) => (
+          item.id.startsWith(`${id}-`) && item.checked
+        ));
+      },
     });
   }
   return elements.get(id);
@@ -95,22 +104,27 @@ vm.runInContext(
 );
 context.__testApi.renderNodeFilters();
 
-element("package-filter").value = "media";
+element("package-filter-options-media").value = "media";
+element("package-filter-options-media").checked = true;
 let filtered = context.__testApi.filterNodeCatalog();
 if (filtered.length !== 1 || filtered[0].id !== "media") {
   throw new Error("package filter should keep only matching package nodes");
 }
 
-element("package-filter").value = "";
-element("input-type-filter").value = "json";
+element("package-filter-options-media").checked = false;
+element("input-type-filter-options-json").value = "json";
+element("input-type-filter-options-json").checked = true;
 filtered = context.__testApi.filterNodeCatalog();
 if (filtered.length !== 1 || filtered[0].id !== "core") {
   throw new Error("input type filter should keep nodes with matching input port type");
 }
 
-element("input-type-filter").value = "";
-element("output-type-filter").value = "image";
+element("input-type-filter-options-json").checked = false;
+element("output-type-filter-options-json").value = "json";
+element("output-type-filter-options-json").checked = true;
+element("output-type-filter-options-image").value = "image";
+element("output-type-filter-options-image").checked = true;
 filtered = context.__testApi.filterNodeCatalog();
-if (filtered.length !== 1 || filtered[0].id !== "media") {
-  throw new Error("output type filter should keep nodes with matching output port type");
+if (filtered.length !== 2) {
+  throw new Error("output type filter should support multiple selected output types");
 }

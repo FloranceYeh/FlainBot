@@ -24,24 +24,18 @@
               <h2 id="library-title">Nodes</h2>
               <input id="node-search" type="search" autocomplete="off" placeholder="Search nodes">
               <div class="node-filters" aria-label="Node filters">
-                <label>
-                  <span>Package</span>
-                  <select id="package-filter">
-                    <option value="">All packages</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Input type</span>
-                  <select id="input-type-filter">
-                    <option value="">All input types</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Output type</span>
-                  <select id="output-type-filter">
-                    <option value="">All output types</option>
-                  </select>
-                </label>
+                <details class="filter-dropdown" data-filter-label="Package">
+                  <summary id="package-filter-summary">All packages</summary>
+                  <div id="package-filter-options" class="filter-options"></div>
+                </details>
+                <details class="filter-dropdown" data-filter-label="Input type">
+                  <summary id="input-type-filter-summary">All input types</summary>
+                  <div id="input-type-filter-options" class="filter-options"></div>
+                </details>
+                <details class="filter-dropdown" data-filter-label="Output type">
+                  <summary id="output-type-filter-summary">All output types</summary>
+                  <div id="output-type-filter-options" class="filter-options"></div>
+                </details>
               </div>
             </div>
             <div id="node-library" class="node-list"></div>
@@ -108,7 +102,7 @@
               </div>
               <div class="field">
                 <label>API Key</label>
-                <input name="api_key" type="password">
+                <input name="api_key">
               </div>
               <div class="field">
                 <label>Model</label>
