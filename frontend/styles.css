@@ -68,9 +68,16 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--panel-border);
   background: #ffffff;
+}
+
+.workbench-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .topbar-tabs {

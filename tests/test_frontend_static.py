@@ -17,8 +17,10 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("class=\"workbench-topbar\"", html)
         topbar_html = html.split("<header class=\"workbench-topbar\">", 1)[1].split("</header>", 1)[0]
         toolbar_html = html.split("<div class=\"canvas-toolbar\">", 1)[1].split("</div>", 1)[0]
-        self.assertNotIn("class=\"brand\"", topbar_html)
+        self.assertIn("<h1 class=\"workbench-title\">FlainBot</h1>", topbar_html)
         self.assertNotIn("class=\"topbar-actions\"", topbar_html)
+        self.assertNotIn("id=\"save-graph\"", topbar_html)
+        self.assertNotIn("id=\"reset-graph\"", topbar_html)
         self.assertIn("id=\"save-graph\"", toolbar_html)
         self.assertIn("id=\"reset-graph\"", toolbar_html)
         self.assertIn("id=\"status-message\"", toolbar_html)
@@ -135,6 +137,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("apiUrl(\"/api/chat\")", js)
         self.assertIn("127.0.0.1:8765", js)
         self.assertIn(".chat-shell", css)
+        self.assertIn(".workbench-title", css)
         self.assertIn("justify-content: center", css)
         self.assertIn(".canvas-actions", css)
         self.assertIn("html,\nbody", css)
