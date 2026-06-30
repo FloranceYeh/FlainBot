@@ -336,6 +336,8 @@ main {
 .preview-node {
   position: static;
   width: 270px;
+  max-height: min(560px, calc(100vh - 24px));
+  overflow: auto;
   box-shadow: 0 12px 28px rgba(24, 32, 45, 0.18);
   pointer-events: none;
 }

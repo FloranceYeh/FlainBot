@@ -48,6 +48,8 @@ const context = {
   document: documentStub,
   window: {
     location: {protocol: "http:", port: "8765", hash: ""},
+    innerWidth: 800,
+    innerHeight: 600,
     addEventListener() {},
   },
   navigator: {clipboard: {writeText() {}}},
@@ -149,6 +151,15 @@ if (
 card.eventListeners.mousemove({clientX: 140, clientY: 160});
 if (preview.style.left !== "152px" || preview.style.top !== "172px") {
   throw new Error("node preview should follow the mouse cursor");
+}
+
+preview.offsetWidth = 270;
+preview.offsetHeight = 216;
+context.window.innerWidth = 320;
+context.window.innerHeight = 240;
+card.eventListeners.mousemove({clientX: 312, clientY: 232});
+if (preview.style.left !== "30px" || preview.style.top !== "12px") {
+  throw new Error("node preview should stay inside the viewport near screen edges");
 }
 
 card.eventListeners.mouseleave();

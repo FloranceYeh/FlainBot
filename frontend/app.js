@@ -369,8 +369,23 @@ function nodePreview(node) {
 
 function moveNodePreview(event) {
   const offset = 12;
-  nodePreviewPopoverEl.style.left = `${event.clientX + offset}px`;
-  nodePreviewPopoverEl.style.top = `${event.clientY + offset}px`;
+  const margin = 12;
+  const previewWidth = nodePreviewPopoverEl.offsetWidth || 270;
+  const previewHeight = nodePreviewPopoverEl.offsetHeight || 0;
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  let left = event.clientX + offset;
+  let top = event.clientY + offset;
+
+  if (left + previewWidth + margin > viewportWidth) {
+    left = event.clientX - previewWidth - offset;
+  }
+  if (top + previewHeight + margin > viewportHeight) {
+    top = event.clientY - previewHeight - offset;
+  }
+
+  nodePreviewPopoverEl.style.left = `${Math.max(margin, Math.min(left, viewportWidth - previewWidth - margin))}px`;
+  nodePreviewPopoverEl.style.top = `${Math.max(margin, Math.min(top, viewportHeight - previewHeight - margin))}px`;
 }
 
 function showNodePreview(node, event) {
