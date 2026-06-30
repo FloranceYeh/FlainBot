@@ -155,8 +155,6 @@ button:hover {
 
 .node-list {
   display: grid;
-  gap: 10px;
-  padding: 12px;
 }
 
 .shelf-header {
@@ -179,6 +177,23 @@ button:hover {
   padding: 6px 8px;
 }
 
+.node-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.node-group + .node-group {
+  border-top: 1px solid var(--panel-border);
+}
+
+.node-group h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
 .node-card {
   border: 1px solid var(--panel-border);
   border-radius: 8px;
@@ -186,7 +201,7 @@ button:hover {
   background: #ffffff;
 }
 
-.node-card h3 {
+.node-card h4 {
   margin: 0 0 4px;
   font-size: 16px;
 }

@@ -5,6 +5,7 @@ let pendingOutput = null;
 let dragState = null;
 
 const libraryEl = document.getElementById("node-library");
+const nodeSearchEl = document.getElementById("node-search");
 const canvasEl = document.getElementById("graph-canvas");
 const nodeLayerEl = document.getElementById("node-layer");
 const edgeLayerEl = document.getElementById("edge-layer");
@@ -103,20 +104,61 @@ function addEdge(fromNode, fromPort, toNode, toPort) {
   render();
 }
 
+function categoryForNode(node) {
+  if (node.type.includes("input")) {
+    return "Input";
+  }
+  if (node.type.includes("prompt")) {
+    return "Prompt";
+  }
+  if (node.type.includes("output")) {
+    return "Output";
+  }
+  if (node.type === "openai" || node.type === "anthropic") {
+    return "Provider";
+  }
+  return "Other";
+}
+
+function filterNodeCatalog() {
+  const query = nodeSearchEl.value.trim().toLowerCase();
+  return nodeCatalog.filter((node) => {
+    const haystack = `${node.type} ${node.className} ${node.title} ${node.description}`.toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
 function renderLibrary() {
   libraryEl.innerHTML = "";
-  nodeCatalog.forEach((node) => {
-    const card = document.createElement("article");
-    card.className = "node-card";
-    card.innerHTML = `
-      <span class="node-type">${node.className}</span>
-      <h3>${node.title}</h3>
-      <p>${node.description}</p>
-      <button type="button">Add node</button>
-    `;
-    card.querySelector("button").addEventListener("click", () => addNode(node.type));
-    libraryEl.appendChild(card);
+  const grouped = new Map();
+  filterNodeCatalog().forEach((node) => {
+    const category = categoryForNode(node);
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+    grouped.get(category).push(node);
   });
+
+  grouped.forEach((nodes, category) => {
+    const group = document.createElement("section");
+    group.className = "node-group";
+    group.innerHTML = `<h3>${category}</h3>`;
+    nodes.forEach((node) => group.appendChild(renderNodeCard(node)));
+    libraryEl.appendChild(group);
+  });
+}
+
+function renderNodeCard(node) {
+  const card = document.createElement("article");
+  card.className = "node-card";
+  card.innerHTML = `
+    <span class="node-type">${node.className}</span>
+    <h4>${node.title}</h4>
+    <p>${node.description}</p>
+    <button type="button">Add node</button>
+  `;
+  card.querySelector("button").addEventListener("click", () => addNode(node.type));
+  return card;
 }
 
 function renderCanvas() {
@@ -437,6 +479,8 @@ document.getElementById("reset-graph").addEventListener("click", () => {
   pendingOutput = null;
   render();
 });
+
+nodeSearchEl.addEventListener("input", renderLibrary);
 
 document.getElementById("copy-code").addEventListener("click", async () => {
   await navigator.clipboard.writeText(pythonCodeEl.textContent);
