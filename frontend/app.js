@@ -1,7 +1,7 @@
 let nodeCatalog = [];
 let graph = {nodes: [], edges: []};
 let selectedId = null;
-let pendingOutput = null;
+let connectionDrag = null;
 let dragState = null;
 let viewportState = {x: 0, y: 0, scale: 1};
 let canvasPanState = null;
@@ -106,7 +106,6 @@ function addEdge(fromNode, fromPort, toNode, toPort) {
     return;
   }
   graph.edges.push({from_node: fromNode, from_port: fromPort, to_node: toNode, to_port: toPort});
-  pendingOutput = null;
   render();
 }
 
@@ -202,7 +201,7 @@ function renderCanvas() {
     item.querySelector(".node-header").addEventListener("pointerdown", (event) => startDrag(event, node.id));
     item.querySelector('[data-action="remove"]').addEventListener("click", () => removeNode(node.id));
     item.querySelectorAll(".port").forEach((port) => {
-      port.addEventListener("click", () => handlePortClick(port));
+      port.addEventListener("pointerdown", startConnectionDrag);
     });
     item.querySelectorAll("[data-prop-key]").forEach((input) => {
       input.addEventListener("input", (event) => updateProperty(node.id, event.target.dataset.propKey, event.target.value));
@@ -226,14 +225,14 @@ function renderPorts(node, direction) {
     return '<span class="node-type">none</span>';
   }
   return ports.map((port) => {
-    const pending = pendingOutput && pendingOutput.nodeId === node.id && pendingOutput.port === port;
     return `
       <button
         type="button"
-        class="port ${direction}${pending ? " pending" : ""}"
+        class="port ${direction}"
         data-node-id="${node.id}"
         data-port="${port}"
         data-direction="${direction}"
+        data-compatible="false"
       >${port}</button>
     `;
   }).join("");
@@ -261,23 +260,6 @@ function renderSelection() {
   document.querySelectorAll(".graph-node").forEach((node) => {
     node.classList.toggle("selected", node.dataset.nodeId === selectedId);
   });
-}
-
-function handlePortClick(port) {
-  const nodeId = port.dataset.nodeId;
-  const portName = port.dataset.port;
-  const direction = port.dataset.direction;
-
-  if (direction === "output") {
-    pendingOutput = {nodeId, port: portName};
-    renderCanvas();
-    renderCode();
-    return;
-  }
-
-  if (direction === "input" && pendingOutput) {
-    addEdge(pendingOutput.nodeId, pendingOutput.port, nodeId, portName);
-  }
 }
 
 function startDrag(event, nodeId) {
@@ -349,15 +331,98 @@ function endCanvasPan() {
   canvasPanState = null;
 }
 
+function canvasPointFromEvent(event) {
+  const canvasRect = canvasEl.getBoundingClientRect();
+  return {
+    x: (event.clientX - canvasRect.left - viewportState.x) / viewportState.scale,
+    y: (event.clientY - canvasRect.top - viewportState.y) / viewportState.scale,
+  };
+}
+
 function portCenter(nodeId, portName, direction) {
   const selector = `.port[data-node-id="${nodeId}"][data-port="${portName}"][data-direction="${direction}"]`;
   const port = nodeLayerEl.querySelector(selector);
   const canvasRect = canvasEl.getBoundingClientRect();
   const portRect = port.getBoundingClientRect();
   return {
-    x: portRect.left - canvasRect.left + portRect.width / 2,
-    y: portRect.top - canvasRect.top + portRect.height / 2,
+    x: (portRect.left - canvasRect.left + portRect.width / 2 - viewportState.x) / viewportState.scale,
+    y: (portRect.top - canvasRect.top + portRect.height / 2 - viewportState.y) / viewportState.scale,
   };
+}
+
+function connectionPath(from, to) {
+  const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
+  return `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`;
+}
+
+function clearConnectionPreview() {
+  edgeLayerEl.querySelectorAll(".preview-connection").forEach((path) => path.remove());
+  nodeLayerEl.querySelectorAll(".port").forEach((port) => {
+    port.classList.remove("compatible");
+    port.dataset.compatible = "false";
+  });
+}
+
+function isCompatiblePort(port) {
+  if (!connectionDrag || !port) {
+    return false;
+  }
+  return port.dataset.nodeId !== connectionDrag.nodeId && port.dataset.direction !== connectionDrag.direction;
+}
+
+function startConnectionDrag(event) {
+  const port = event.currentTarget;
+  event.preventDefault();
+  event.stopPropagation();
+  connectionDrag = {
+    nodeId: port.dataset.nodeId,
+    port: port.dataset.port,
+    direction: port.dataset.direction,
+    start: portCenter(port.dataset.nodeId, port.dataset.port, port.dataset.direction),
+    current: canvasPointFromEvent(event),
+  };
+  port.setPointerCapture(event.pointerId);
+  nodeLayerEl.querySelectorAll(".port").forEach((candidate) => {
+    const compatible = isCompatiblePort(candidate);
+    candidate.classList.toggle("compatible", compatible);
+    candidate.dataset.compatible = compatible ? "true" : "false";
+  });
+  renderConnectionPreview();
+}
+
+function renderConnectionPreview() {
+  if (!connectionDrag) {
+    return;
+  }
+  edgeLayerEl.querySelectorAll(".preview-connection").forEach((path) => path.remove());
+  const from = connectionDrag.direction === "output" ? connectionDrag.start : connectionDrag.current;
+  const to = connectionDrag.direction === "output" ? connectionDrag.current : connectionDrag.start;
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.classList.add("preview-connection");
+  path.setAttribute("d", connectionPath(from, to));
+  edgeLayerEl.appendChild(path);
+}
+
+function moveConnectionDrag(event) {
+  if (!connectionDrag) {
+    return;
+  }
+  connectionDrag.current = canvasPointFromEvent(event);
+  renderConnectionPreview();
+}
+
+function finishConnectionDrag(event) {
+  if (!connectionDrag) {
+    return;
+  }
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".port");
+  if (isCompatiblePort(target)) {
+    const from = connectionDrag.direction === "output" ? connectionDrag : target.dataset;
+    const to = connectionDrag.direction === "output" ? target.dataset : connectionDrag;
+    addEdge(from.nodeId, from.port, to.nodeId, to.port);
+  }
+  connectionDrag = null;
+  clearConnectionPreview();
 }
 
 function renderEdges() {
@@ -365,12 +430,12 @@ function renderEdges() {
   graph.edges.forEach((edge) => {
     const from = portCenter(edge.from_node, edge.from_port, "output");
     const to = portCenter(edge.to_node, edge.to_port, "input");
-    const curve = Math.max(60, Math.abs(to.x - from.x) / 2);
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", `M ${from.x} ${from.y} C ${from.x + curve} ${from.y}, ${to.x - curve} ${to.y}, ${to.x} ${to.y}`);
+    path.setAttribute("d", connectionPath(from, to));
     path.setAttribute("marker-end", "url(#arrowhead)");
     edgeLayerEl.appendChild(path);
   });
+  renderConnectionPreview();
 }
 
 function quote(value) {
@@ -532,7 +597,7 @@ async function init() {
 document.getElementById("reset-graph").addEventListener("click", () => {
   graph = {nodes: [], edges: []};
   selectedId = null;
-  pendingOutput = null;
+  connectionDrag = null;
   render();
 });
 
@@ -580,6 +645,9 @@ chatFormEl.addEventListener("submit", async (event) => {
 canvasEl.addEventListener("pointermove", dragMove);
 canvasEl.addEventListener("pointerup", dragEnd);
 canvasEl.addEventListener("pointercancel", dragEnd);
+canvasEl.addEventListener("pointermove", moveConnectionDrag);
+canvasEl.addEventListener("pointerup", finishConnectionDrag);
+canvasEl.addEventListener("pointercancel", finishConnectionDrag);
 canvasEl.addEventListener("wheel", zoomCanvas, {passive: false});
 canvasEl.addEventListener("pointerdown", startCanvasPan);
 canvasEl.addEventListener("pointermove", moveCanvasPan);

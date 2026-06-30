@@ -342,6 +342,12 @@ button:hover {
   marker-end: url(#arrowhead);
 }
 
+.edge-layer .preview-connection {
+  stroke-dasharray: 7 5;
+  opacity: 0.76;
+  marker-end: none;
+}
+
 .edge-layer polygon {
   fill: var(--accent);
 }
@@ -437,7 +443,7 @@ button:hover {
   content: none;
 }
 
-.port.pending {
+.port.compatible {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.14);
 }
