@@ -4,6 +4,7 @@ import io
 import sys
 from urllib import request
 import json
+import tempfile
 import unittest
 from http.server import ThreadingHTTPServer
 import threading
@@ -22,6 +23,37 @@ class WebChatTests(unittest.TestCase):
         store.save(config)
 
         self.assertEqual(store.load(), config)
+
+    def test_graph_config_store_persists_config_to_local_file(self):
+        config = {
+            "nodes": [{"id": "chat_input_1", "type": "chat_input", "props": {}}],
+            "edges": [],
+            "providers": [{"id": "local", "format": "openai_chat"}],
+            "personas": [{"persona_id": "cat"}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = Path(tmpdir) / "flainbot_state.json"
+            store = web_chat.GraphConfigStore(data_file=data_file)
+
+            store.save(config)
+            reloaded = web_chat.GraphConfigStore(data_file=data_file)
+
+        self.assertEqual(reloaded.load(), config)
+
+    def test_graph_config_store_persists_provider_and_persona_updates(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = Path(tmpdir) / "flainbot_state.json"
+            store = web_chat.GraphConfigStore(data_file=data_file)
+            store.save({"nodes": [{"id": "n", "type": "chat_input", "props": {}}], "edges": []})
+            store.save_providers([{"id": "provider"}])
+            store.save_personas([{"persona_id": "persona"}])
+
+            reloaded = web_chat.GraphConfigStore(data_file=data_file)
+
+        self.assertEqual(reloaded.load()["nodes"], [{"id": "n", "type": "chat_input", "props": {}}])
+        self.assertEqual(reloaded.load_providers(), [{"id": "provider"}])
+        self.assertEqual(reloaded.load_personas(), [{"persona_id": "persona"}])
 
     def test_run_chat_uses_active_graph_config(self):
         store = web_chat.GraphConfigStore()
@@ -406,6 +438,7 @@ class WebChatTests(unittest.TestCase):
 
         self.assertEqual(args.host, "127.0.0.1")
         self.assertEqual(args.port, 8765)
+        self.assertEqual(args.data_file, str(web_chat.DEFAULT_DATA_FILE))
 
     def test_main_starts_with_empty_graph_config(self):
         stdout = io.StringIO()

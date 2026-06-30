@@ -23,7 +23,17 @@ class StartScriptTests(unittest.TestCase):
                     result = start.main([])
 
         self.assertEqual(result, 0)
-        self.assertEqual(web_chat_main.call_args.args[0], ["--host", "127.0.0.1", "--port", "8765"])
+        self.assertEqual(
+            web_chat_main.call_args.args[0],
+            [
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8765",
+                "--data-file",
+                str(start.web_chat.DEFAULT_DATA_FILE),
+            ],
+        )
         self.assertIn("http://127.0.0.1:8765/#chat", stdout.getvalue())
 
     def test_custom_host_and_port_forward_to_web_chat(self):
@@ -48,6 +58,29 @@ class StartScriptTests(unittest.TestCase):
                 "0.0.0.0",
                 "--port",
                 "9000",
+                "--data-file",
+                str(start.web_chat.DEFAULT_DATA_FILE),
+            ],
+        )
+
+    def test_data_file_argument_forwards_to_web_chat(self):
+        stdout = io.StringIO()
+
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("scripts.web_chat.main", return_value=0) as web_chat_main:
+                with redirect_stdout(stdout):
+                    result = start.main(["--data-file", "custom-state.json"])
+
+        self.assertEqual(result, 0)
+        self.assertEqual(
+            web_chat_main.call_args.args[0],
+            [
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8765",
+                "--data-file",
+                "custom-state.json",
             ],
         )
 

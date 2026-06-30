@@ -9,6 +9,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Start the FlainBot web UI and chat server.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8765, type=int)
+    parser.add_argument("--data-file", default=str(web_chat.DEFAULT_DATA_FILE))
     return parser.parse_args(argv)
 
 
@@ -18,6 +19,8 @@ def build_web_chat_argv(args: argparse.Namespace) -> list[str]:
         args.host,
         "--port",
         str(args.port),
+        "--data-file",
+        args.data_file,
     ]
 
 

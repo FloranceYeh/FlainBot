@@ -17,34 +17,61 @@ from flainbot.node_registry import discover_node_registry
 FRONTEND = ROOT / "frontend"
 VUE_DIST = FRONTEND / "dist"
 VUE_ENTRY = ROOT / "index.html"
+DEFAULT_DATA_FILE = ROOT / "data" / "flainbot_state.json"
+
+
+def empty_config() -> dict:
+    return {
+        "nodes": [],
+        "edges": [],
+        "providers": [],
+        "personas": [],
+    }
 
 
 class GraphConfigStore:
-    def __init__(self, initial_config: dict | None = None) -> None:
-        self._config = initial_config or {
-            "nodes": [],
-            "edges": [],
-            "providers": [],
-            "personas": [],
-        }
+    def __init__(self, initial_config: dict | None = None, data_file: Path | str | None = None) -> None:
+        self._data_file = Path(data_file) if data_file is not None else None
+        if initial_config is not None:
+            self._config = initial_config
+            self._persist()
+            return
+        self._config = self._load_from_file() if self._data_file else empty_config()
 
     def save(self, config: dict) -> None:
         self._config = config
+        self._persist()
 
     def load(self) -> dict:
         return self._config
 
     def save_providers(self, providers: list[dict]) -> None:
         self._config = {**self._config, "providers": providers}
+        self._persist()
 
     def load_providers(self) -> list[dict]:
         return self._config.get("providers", [])
 
     def save_personas(self, personas: list[dict]) -> None:
         self._config = {**self._config, "personas": personas}
+        self._persist()
 
     def load_personas(self) -> list[dict]:
         return self._config.get("personas", [])
+
+    def _load_from_file(self) -> dict:
+        if self._data_file is None or not self._data_file.exists():
+            return empty_config()
+        return json.loads(self._data_file.read_text(encoding="utf-8"))
+
+    def _persist(self) -> None:
+        if self._data_file is None:
+            return
+        self._data_file.parent.mkdir(parents=True, exist_ok=True)
+        self._data_file.write_text(
+            json.dumps(self._config, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
 
 def run_chat(message: str, store: GraphConfigStore, transports=None) -> dict[str, str]:
@@ -199,12 +226,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run FlainBot web chat.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8765, type=int)
+    parser.add_argument("--data-file", default=str(DEFAULT_DATA_FILE))
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    store = GraphConfigStore()
+    store = GraphConfigStore(data_file=args.data_file)
     server = ThreadingHTTPServer((args.host, args.port), make_handler(store))
     print(f"FlainBot web chat: http://{args.host}:{args.port}/")
     server.serve_forever()
