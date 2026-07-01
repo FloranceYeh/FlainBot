@@ -34,6 +34,10 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "App.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "api.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "graph.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "graph" / "catalog.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "graph" / "geometry.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "graph" / "codegen.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "graph" / "json.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "components" / "NodeShelf.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "components" / "GraphCanvas.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "components" / "ResultRail.vue").exists())
@@ -69,6 +73,29 @@ class FrontendStaticTests(unittest.TestCase):
 
         self.assertNotIn(".trace-panel", entry)
         self.assertNotIn(".graph-node", entry)
+
+    def test_frontend_graph_utilities_are_split_by_responsibility(self):
+        entry = (ROOT / "src" / "frontend" / "graph.js").read_text(encoding="utf-8")
+        catalog = (ROOT / "src" / "frontend" / "graph" / "catalog.js").read_text(encoding="utf-8")
+        geometry = (ROOT / "src" / "frontend" / "graph" / "geometry.js").read_text(encoding="utf-8")
+        codegen = (ROOT / "src" / "frontend" / "graph" / "codegen.js").read_text(encoding="utf-8")
+        json_utils = (ROOT / "src" / "frontend" / "graph" / "json.js").read_text(encoding="utf-8")
+
+        self.assertIn("export * from \"./graph/catalog.js\";", entry)
+        self.assertIn("export * from \"./graph/geometry.js\";", entry)
+        self.assertIn("export * from \"./graph/codegen.js\";", entry)
+        self.assertIn("export * from \"./graph/json.js\";", entry)
+        self.assertNotIn("function filterNodeCatalog", entry)
+        self.assertNotIn("function connectionPath", entry)
+        self.assertNotIn("function generatePython", entry)
+
+        for function_name in ["flattenNodeCatalog", "filterNodeCatalog", "portName", "portType"]:
+            self.assertIn(f"function {function_name}", catalog)
+        for function_name in ["connectionPath", "connectionArrow", "nodeDragPosition", "nodePositionFromCenter"]:
+            self.assertIn(f"function {function_name}", geometry)
+        self.assertIn("function generatePython", codegen)
+        self.assertIn("function cloneDefaults", json_utils)
+        self.assertIn("function parseJsonOrEmpty", json_utils)
 
     def test_planner_page_references_assets_and_nodes(self):
         html = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
