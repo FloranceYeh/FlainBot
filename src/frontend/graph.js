@@ -155,6 +155,27 @@ export function edgeToReplaceForPort(edges, nodeId, port, direction) {
   return edges.findIndex((edge) => edge.to_node === nodeId && edge.to_port === port);
 }
 
+export function graphNodeCenter(nodes) {
+  if (nodes.length === 0) {
+    return null;
+  }
+  const bounds = nodes.reduce((acc, node) => ({
+    minX: Math.min(acc.minX, node.x),
+    maxX: Math.max(acc.maxX, node.x),
+    minY: Math.min(acc.minY, node.y),
+    maxY: Math.max(acc.maxY, node.y),
+  }), {
+    minX: nodes[0].x,
+    maxX: nodes[0].x,
+    minY: nodes[0].y,
+    maxY: nodes[0].y,
+  });
+  return {
+    x: (bounds.minX + bounds.maxX) / 2,
+    y: (bounds.minY + bounds.maxY) / 2,
+  };
+}
+
 function cubicPoint(start, controlA, controlB, end, t) {
   const mt = 1 - t;
   return {

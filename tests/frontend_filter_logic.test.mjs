@@ -1,6 +1,7 @@
 import {
   connectionArrow,
   connectionPath,
+  graphNodeCenter,
   edgeToReplaceForPort,
   filterNodeCatalog,
   filterOptions,
@@ -158,4 +159,17 @@ if (edgeToReplaceForPort(existingEdges, "source", "text", "output") !== -1) {
 }
 if (edgeToReplaceForPort(existingEdges, "first", "text", "input") !== 0) {
   throw new Error("input ports should replace their existing single incoming edge");
+}
+
+const emptyCenter = graphNodeCenter([]);
+if (emptyCenter !== null) {
+  throw new Error("empty graphs should not have a node center");
+}
+
+const nodeCenter = graphNodeCenter([
+  {x: -200, y: -100},
+  {x: 300, y: 500},
+]);
+if (nodeCenter.x !== 50 || nodeCenter.y !== 200) {
+  throw new Error("graph center should use the center of all node positions, including negative coordinates");
 }

@@ -140,6 +140,7 @@ import {
   filterOptions,
   flattenNodeCatalog,
   generatePython,
+  graphNodeCenter,
   parseJsonOrEmpty,
   portEdgeAnchor,
 } from "./graph.js";
@@ -264,6 +265,19 @@ export default defineComponent({
       return `${edge.from_node}:${edge.from_port}->${edge.to_node}:${edge.to_port}:${index}`;
     }
 
+    function normalizeGraphCenter() {
+      const center = graphNodeCenter(graph.nodes);
+      if (!center || (center.x === 0 && center.y === 0)) {
+        return;
+      }
+      for (const node of graph.nodes) {
+        node.x -= center.x;
+        node.y -= center.y;
+      }
+      viewportState.x += center.x * viewportState.scale;
+      viewportState.y += center.y * viewportState.scale;
+    }
+
     function addNode(type, position = null) {
       const spec = flatNodeCatalog.value.find((node) => node.type === type);
       if (!spec) {
@@ -271,8 +285,9 @@ export default defineComponent({
         return;
       }
       const offset = graph.nodes.length * 28;
-      const x = position ? Math.max(0, position.x) : 48 + offset;
-      const y = position ? Math.max(0, position.y) : 48 + offset;
+      const center = graphNodeCenter(graph.nodes) || {x: 0, y: 0};
+      const x = position ? position.x : center.x + offset;
+      const y = position ? position.y : center.y + offset;
       const item = {
         id: nextId(spec.type),
         type: spec.type,
@@ -286,6 +301,7 @@ export default defineComponent({
         y,
       };
       graph.nodes.push(item);
+      normalizeGraphCenter();
       selectedId.value = item.id;
       nextTick(refreshEdgeLayout);
     }
@@ -293,6 +309,7 @@ export default defineComponent({
     function removeNode(id) {
       graph.nodes = graph.nodes.filter((node) => node.id !== id);
       graph.edges = graph.edges.filter((edge) => edge.from_node !== id && edge.to_node !== id);
+      normalizeGraphCenter();
       if (selectedId.value === id) {
         selectedId.value = graph.nodes[0]?.id ?? null;
       }
@@ -366,6 +383,7 @@ export default defineComponent({
       graph.edges = config.edges || [];
       selectedId.value = graph.nodes[0]?.id ?? null;
       latestNodeOutputs.value = {};
+      normalizeGraphCenter();
       nextTick(refreshEdgeLayout);
     }
 
@@ -629,12 +647,16 @@ export default defineComponent({
         return;
       }
       const node = graph.nodes.find((item) => item.id === dragState.value.nodeId);
-      node.x = Math.max(0, dragState.value.originX + event.clientX - dragState.value.startX);
-      node.y = Math.max(0, dragState.value.originY + event.clientY - dragState.value.startY);
+      node.x = dragState.value.originX + event.clientX - dragState.value.startX;
+      node.y = dragState.value.originY + event.clientY - dragState.value.startY;
       nextTick(refreshEdgeLayout);
     }
 
     function dragEnd() {
+      if (dragState.value) {
+        normalizeGraphCenter();
+        nextTick(refreshEdgeLayout);
+      }
       dragState.value = null;
     }
 
