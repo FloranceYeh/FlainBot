@@ -789,6 +789,8 @@ code {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .session-controls select {
@@ -797,6 +799,31 @@ code {
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   padding: 6px 8px;
+}
+
+.trace-size-control {
+  display: inline-grid;
+  grid-template-columns: auto repeat(3, 32px);
+  align-items: center;
+  gap: 4px;
+}
+
+.trace-size-control span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trace-size-control button {
+  width: 32px;
+  min-width: 32px;
+  min-height: 30px;
+  padding: 4px 0;
+}
+
+.trace-size-control button.active {
+  border-color: var(--accent);
+  background: #e8f2fb;
+  color: var(--accent);
 }
 
 .messages {
@@ -810,6 +837,7 @@ code {
 
 .message {
   max-width: 76%;
+  min-width: 0;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 10px 12px;
@@ -843,10 +871,33 @@ code {
 }
 
 .trace-panel pre {
+  max-width: 100%;
   max-height: 220px;
   min-height: 0;
   margin-top: 8px;
+  overflow: auto;
   padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.trace-panel code {
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
+}
+
+.trace-panel.trace-size-small pre {
+  max-height: 140px;
+}
+
+.trace-panel.trace-size-medium pre {
+  max-height: 260px;
+}
+
+.trace-panel.trace-size-large pre {
+  max-height: 460px;
 }
 
 .composer {
