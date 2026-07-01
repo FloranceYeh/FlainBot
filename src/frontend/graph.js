@@ -176,6 +176,20 @@ export function graphNodeCenter(nodes) {
   };
 }
 
+export function nodeDragPosition(dragState, pointerEvent, scale) {
+  return {
+    x: dragState.originX + (pointerEvent.clientX - dragState.startX) / scale,
+    y: dragState.originY + (pointerEvent.clientY - dragState.startY) / scale,
+  };
+}
+
+export function nodePositionFromCenter(center, size = {width: 270, height: 270}) {
+  return {
+    x: center.x - size.width / 2,
+    y: center.y - size.height / 2,
+  };
+}
+
 function cubicPoint(start, controlA, controlB, end, t) {
   const mt = 1 - t;
   return {

@@ -141,6 +141,8 @@ import {
   flattenNodeCatalog,
   generatePython,
   graphNodeCenter,
+  nodeDragPosition,
+  nodePositionFromCenter,
   parseJsonOrEmpty,
   portEdgeAnchor,
 } from "./graph.js";
@@ -286,8 +288,7 @@ export default defineComponent({
       }
       const offset = graph.nodes.length * 28;
       const center = graphNodeCenter(graph.nodes) || {x: 0, y: 0};
-      const x = position ? position.x : center.x + offset;
-      const y = position ? position.y : center.y + offset;
+      const nodePosition = position || {x: center.x + offset, y: center.y + offset};
       const item = {
         id: nextId(spec.type),
         type: spec.type,
@@ -297,8 +298,8 @@ export default defineComponent({
         inputs: spec.inputs,
         outputs: spec.outputs,
         props: cloneDefaults(spec.defaults),
-        x,
-        y,
+        x: nodePosition.x,
+        y: nodePosition.y,
       };
       graph.nodes.push(item);
       normalizeGraphCenter();
@@ -625,7 +626,7 @@ export default defineComponent({
         return;
       }
       hideNodePreview();
-      addNode(type, canvasPointFromEvent(event));
+      addNode(type, nodePositionFromCenter(canvasPointFromEvent(event)));
     }
 
     function startDrag(event, nodeId) {
@@ -647,8 +648,9 @@ export default defineComponent({
         return;
       }
       const node = graph.nodes.find((item) => item.id === dragState.value.nodeId);
-      node.x = dragState.value.originX + event.clientX - dragState.value.startX;
-      node.y = dragState.value.originY + event.clientY - dragState.value.startY;
+      const nextPosition = nodeDragPosition(dragState.value, event, viewportState.scale);
+      node.x = nextPosition.x;
+      node.y = nextPosition.y;
       nextTick(refreshEdgeLayout);
     }
 

@@ -2,6 +2,8 @@ import {
   connectionArrow,
   connectionPath,
   graphNodeCenter,
+  nodeDragPosition,
+  nodePositionFromCenter,
   edgeToReplaceForPort,
   filterNodeCatalog,
   filterOptions,
@@ -172,4 +174,18 @@ const nodeCenter = graphNodeCenter([
 ]);
 if (nodeCenter.x !== 50 || nodeCenter.y !== 200) {
   throw new Error("graph center should use the center of all node positions, including negative coordinates");
+}
+
+const scaledDrag = nodeDragPosition(
+  {originX: 100, originY: -50, startX: 20, startY: 40},
+  {clientX: 70, clientY: 10},
+  0.5,
+);
+if (scaledDrag.x !== 200 || scaledDrag.y !== -110) {
+  throw new Error("node dragging should convert screen movement into scaled canvas movement");
+}
+
+const centeredDrop = nodePositionFromCenter({x: 300, y: 240});
+if (centeredDrop.x !== 165 || centeredDrop.y !== 105) {
+  throw new Error("dropped nodes should use the mouse as the node center, not the top-left corner");
 }
