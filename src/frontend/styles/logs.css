@@ -1,0 +1,128 @@
+.logs-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.logs-header h2,
+.logs-header p,
+.log-main h3 {
+  margin: 0;
+}
+
+.logs-header p {
+  color: var(--muted);
+}
+
+.logs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.logs-toolbar select {
+  min-height: 34px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 6px 8px;
+}
+
+.logs-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  margin-top: 12px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--panel-border);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.log-entry.level-error {
+  border-left-color: var(--danger);
+}
+
+.log-entry.level-error .log-level {
+  color: var(--danger);
+  background: #fff1f0;
+}
+
+.log-meta {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-level,
+.log-source {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.log-level {
+  color: var(--accent-strong);
+  background: #eaf4ff;
+}
+
+.log-source {
+  color: #44546a;
+  background: #eef2f6;
+}
+
+.log-main {
+  min-width: 0;
+}
+
+.log-main h3 {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.log-details {
+  margin-top: 8px;
+}
+
+.log-details summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.log-details pre {
+  min-height: 0;
+  max-height: 360px;
+  margin-top: 8px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

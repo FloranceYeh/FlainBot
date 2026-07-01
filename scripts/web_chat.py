@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import sys
+import traceback
+from datetime import datetime, timezone
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -18,6 +21,7 @@ FRONTEND = ROOT / "frontend"
 VUE_DIST = FRONTEND / "dist"
 VUE_ENTRY = ROOT / "index.html"
 DEFAULT_DATA_FILE = ROOT / "data" / "flainbot_state.json"
+DEFAULT_MAX_LOGS = 500
 
 
 def empty_config() -> dict:
@@ -28,6 +32,7 @@ def empty_config() -> dict:
         "personas": [],
         "sessions": [{"id": "default", "title": "Default", "contexts": []}],
         "active_session_id": "default",
+        "logs": [],
     }
 
 
@@ -43,10 +48,15 @@ def normalize_config(config: dict) -> dict:
         ]
         normalized["active_session_id"] = "default"
     normalized["sessions"] = normalize_sessions(normalized.get("sessions", []))
+    normalized["logs"] = normalize_logs(normalized.get("logs", []))
     if not any(session["id"] == normalized.get("active_session_id") for session in normalized["sessions"]):
         normalized["active_session_id"] = normalized["sessions"][0]["id"]
     normalized.pop("session_contexts", None)
     return normalized
+
+
+def public_config(config: dict) -> dict:
+    return {key: value for key, value in config.items() if key != "logs"}
 
 
 def normalize_sessions(sessions: list[dict]) -> list[dict]:
@@ -65,15 +75,43 @@ def normalize_sessions(sessions: list[dict]) -> list[dict]:
     return normalized or [{"id": "default", "title": "Default", "contexts": []}]
 
 
+def normalize_logs(logs: list[dict]) -> list[dict]:
+    normalized = []
+    for index, log in enumerate(logs):
+        if not isinstance(log, dict):
+            continue
+        normalized.append(
+            {
+                "id": str(log.get("id") or f"log_{index + 1}"),
+                "timestamp": str(log.get("timestamp") or now_iso()),
+                "level": str(log.get("level") or "info"),
+                "source": str(log.get("source") or "system"),
+                "message": str(log.get("message") or ""),
+                "details": log.get("details") if isinstance(log.get("details"), dict) else {},
+            }
+        )
+    return normalized
+
+
 def title_from_session_id(session_id: str) -> str:
     if session_id == "default":
         return "Default"
     return session_id.replace("_", " ").replace("-", " ").title()
 
 
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 class GraphConfigStore:
-    def __init__(self, initial_config: dict | None = None, data_file: Path | str | None = None) -> None:
+    def __init__(
+        self,
+        initial_config: dict | None = None,
+        data_file: Path | str | None = None,
+        max_logs: int = DEFAULT_MAX_LOGS,
+    ) -> None:
         self._data_file = Path(data_file) if data_file is not None else None
+        self._max_logs = max_logs
         if initial_config is not None:
             self._config = normalize_config(initial_config)
             self._persist()
@@ -81,11 +119,32 @@ class GraphConfigStore:
         self._config = normalize_config(self._load_from_file() if self._data_file else empty_config())
 
     def save(self, config: dict) -> None:
-        self._config = normalize_config(config)
+        self._config = normalize_config({**config, "logs": self.load_logs()})
         self._persist()
 
     def load(self) -> dict:
-        return self._config
+        return public_config(self._config)
+
+    def append_log(self, level: str, source: str, message: str, details: dict | None = None) -> dict:
+        log = {
+            "id": f"log_{uuid4().hex}",
+            "timestamp": now_iso(),
+            "level": level,
+            "source": source,
+            "message": message,
+            "details": details or {},
+        }
+        logs = [*self.load_logs(), log][-self._max_logs :]
+        self._config = normalize_config({**self._config, "logs": logs})
+        self._persist()
+        return log
+
+    def load_logs(self) -> list[dict]:
+        return self._config.get("logs", [])
+
+    def clear_logs(self) -> None:
+        self._config = normalize_config({**self._config, "logs": []})
+        self._persist()
 
     def save_sessions(self, sessions: list[dict], active_session_id: str | None = None) -> None:
         active_id = active_session_id or self._config.get("active_session_id") or "default"
@@ -215,6 +274,9 @@ def make_handler(store: GraphConfigStore):
             if self.path == "/api/nodes":
                 self.send_json(discover_node_registry().catalog())
                 return
+            if self.path == "/api/logs":
+                self.send_json({"logs": store.load_logs()})
+                return
 
             file_path = static_file_path(self.path)
             if file_path is None:
@@ -235,24 +297,33 @@ def make_handler(store: GraphConfigStore):
             if self.path == "/api/graph":
                 payload = self.read_json()
                 store.save(payload)
+                store.append_log(
+                    "info",
+                    "config",
+                    "Graph config saved",
+                    {"nodes": len(payload.get("nodes", [])), "edges": len(payload.get("edges", []))},
+                )
                 self.send_json({"status": "ok"})
                 return
 
             if self.path == "/api/providers":
                 payload = self.read_json()
                 store.save_providers(payload)
+                store.append_log("info", "config", "Providers saved", {"count": len(payload)})
                 self.send_json({"status": "ok"})
                 return
 
             if self.path == "/api/personas":
                 payload = self.read_json()
                 store.save_personas(payload)
+                store.append_log("info", "config", "Personas saved", {"count": len(payload)})
                 self.send_json({"status": "ok"})
                 return
 
             if self.path == "/api/sessions":
                 payload = self.read_json()
                 store.save_sessions(payload.get("sessions", []), payload.get("active_session_id"))
+                store.append_log("info", "api", "Sessions saved", {"count": len(payload.get("sessions", []))})
                 self.send_json({"status": "ok"})
                 return
 
@@ -261,11 +332,47 @@ def make_handler(store: GraphConfigStore):
                 return
 
             payload = self.read_json()
-            self.send_json(run_chat(payload["message"], store, session_id=payload.get("session_id")))
+            session_id = payload.get("session_id")
+            active_session_id = session_id or store.load().get("active_session_id")
+            store.append_log("info", "runtime", "Chat request started", {"session_id": active_session_id})
+            try:
+                result = run_chat(payload["message"], store, session_id=session_id)
+            except Exception as error:
+                store.append_log(
+                    "error",
+                    "runtime",
+                    "Chat request failed",
+                    {
+                        "endpoint": "/api/chat",
+                        "session_id": active_session_id,
+                        "error_type": type(error).__name__,
+                        "error": str(error),
+                        "traceback": traceback.format_exc(),
+                    },
+                )
+                self.send_json({"error": str(error)}, status=500)
+                return
+            store.append_log(
+                "info",
+                "runtime",
+                "Chat request completed",
+                {
+                    "session_id": active_session_id,
+                    "replies": len(result.get("replies", [])),
+                    "trace": len(result.get("trace", [])),
+                },
+            )
+            self.send_json(result)
 
         def do_DELETE(self) -> None:
             if self.path.startswith("/api/sessions/"):
-                store.delete_session(self.path.rsplit("/", 1)[-1])
+                session_id = self.path.rsplit("/", 1)[-1]
+                store.delete_session(session_id)
+                store.append_log("info", "api", "Session deleted", {"session_id": session_id})
+                self.send_json({"status": "ok"})
+                return
+            if self.path == "/api/logs":
+                store.clear_logs()
                 self.send_json({"status": "ok"})
                 return
             self.send_error(404)
@@ -284,6 +391,7 @@ def make_handler(store: GraphConfigStore):
                 "/api/providers",
                 "/api/personas",
                 "/api/sessions",
+                "/api/logs",
             }:
                 self.send_error(404)
                 return
@@ -297,9 +405,9 @@ def make_handler(store: GraphConfigStore):
             length = int(self.headers.get("Content-Length", "0"))
             return json.loads(self.rfile.read(length).decode("utf-8"))
 
-        def send_json(self, payload: dict) -> None:
+        def send_json(self, payload: dict, status: int = 200) -> None:
             body = json.dumps(payload).encode("utf-8")
-            self.send_response(200)
+            self.send_response(status)
             self.send_cors_headers()
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))

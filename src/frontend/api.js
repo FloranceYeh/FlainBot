@@ -44,6 +44,10 @@ export function loadSessions() {
   return fetchJson("/api/sessions", "Could not load sessions");
 }
 
+export function loadLogs() {
+  return fetchJson("/api/logs", "Could not load logs");
+}
+
 export async function postJson(path, payload, errorPrefix) {
   let response;
   try {
@@ -86,6 +90,19 @@ export async function deleteSession(sessionId) {
   }
   if (!response.ok) {
     throw new Error(`session delete failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function clearLogs() {
+  let response;
+  try {
+    response = await fetch(apiUrl("/api/logs"), {method: "DELETE"});
+  } catch (error) {
+    throw new Error("Could not reach FlainBot server. Start it with: python start.py");
+  }
+  if (!response.ok) {
+    throw new Error(`log clear failed: ${response.status}`);
   }
   return response.json();
 }

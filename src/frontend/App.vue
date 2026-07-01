@@ -98,6 +98,17 @@
         @select-session="selectSession"
         @submit="handleChatSubmit"
       />
+      <LogsView
+        :active="activeView === 'logs'"
+        :filtered-logs="filteredLogs"
+        :level-options="logLevelOptions"
+        :logs="logs"
+        :source-options="logSourceOptions"
+        v-model:selected-level="selectedLogLevel"
+        v-model:selected-source="selectedLogSource"
+        @clear="clearLogEntries"
+        @refresh="refreshLogs"
+      />
     </main>
   </div>
 
@@ -117,9 +128,11 @@ import ResultRail from "./components/ResultRail.vue";
 import ProvidersView from "./views/ProvidersView.vue";
 import PersonasView from "./views/PersonasView.vue";
 import ChatView from "./views/ChatView.vue";
+import LogsView from "./views/LogsView.vue";
 import {useCanvasInteractions} from "./composables/useCanvasInteractions.js";
 import {useChatSessions} from "./composables/useChatSessions.js";
 import {useGraphPlanner} from "./composables/useGraphPlanner.js";
+import {useLogs} from "./composables/useLogs.js";
 import {usePersonaSettings} from "./composables/usePersonaSettings.js";
 import {useProviderSettings} from "./composables/useProviderSettings.js";
 import {
@@ -134,7 +147,7 @@ import {
 
 export default defineComponent({
   name: "App",
-  components: {ChatView, GraphCanvas, NodePreview, NodeShelf, PersonasView, ProvidersView, ResultRail},
+  components: {ChatView, GraphCanvas, LogsView, NodePreview, NodeShelf, PersonasView, ProvidersView, ResultRail},
   setup() {
     const activeView = ref("planner");
     const statusMessage = ref("");
@@ -148,6 +161,7 @@ export default defineComponent({
       {id: "providers", label: "Providers"},
       {id: "personas", label: "Personas"},
       {id: "chat", label: "Chat"},
+      {id: "logs", label: "Logs"},
     ];
 
     function setStatus(message, type = "") {
@@ -191,6 +205,7 @@ export default defineComponent({
     const chat = useChatSessions({
       updateLatestNodeOutputs: planner.updateLatestNodeOutputs,
     });
+    const logState = useLogs({setStatus});
 
     function toggleResultPanel() {
       resultRailCollapsed.value = !resultRailCollapsed.value;
@@ -218,6 +233,9 @@ export default defineComponent({
       }
       if (window.location.hash === "#personas") {
         return "personas";
+      }
+      if (window.location.hash === "#logs") {
+        return "logs";
       }
       return "planner";
     }
@@ -247,6 +265,7 @@ export default defineComponent({
         providerSettings.providers.value = savedGraph.providers || await loadProviders();
         personaSettings.personas.value = savedGraph.personas || await loadPersonas();
         chat.restoreSessions(await loadSessions());
+        await logState.refreshLogs();
       } catch (error) {
         setStatus(error.message, "error");
       }
@@ -272,6 +291,8 @@ export default defineComponent({
       latestNodeOutputs: planner.latestNodeOutputs,
       editPersona: personaSettings.editPersona,
       editProvider: providerSettings.editProvider,
+      clearLogEntries: logState.clearLogEntries,
+      filteredLogs: logState.filteredLogs,
       handleCanvasPointerMove: canvas.handleCanvasPointerMove,
       handleCanvasPointerUp: canvas.handleCanvasPointerUp,
       handleCanvasDrop: canvas.handleCanvasDrop,
@@ -282,6 +303,9 @@ export default defineComponent({
       handleProviderSubmit: providerSettings.handleProviderSubmit,
       handleSaveGraph,
       hideNodePreview: canvas.hideNodePreview,
+      logs: logState.logs,
+      logLevelOptions: logState.levelOptions,
+      logSourceOptions: logState.sourceOptions,
       messageInput: chat.messageInput,
       messages: chat.messages,
       messagesEl: chat.messagesEl,
@@ -306,10 +330,13 @@ export default defineComponent({
       renderedEdges: canvas.renderedEdges,
       resetGraph,
       resultRailCollapsed,
+      refreshLogs: logState.refreshLogs,
       selectNode: planner.selectNode,
       selectSession: chat.selectSession,
       selectedId: planner.selectedId,
       selectedInputType: planner.selectedInputType,
+      selectedLogLevel: logState.selectedLevel,
+      selectedLogSource: logState.selectedSource,
       selectedOutputType: planner.selectedOutputType,
       selectedPackage: planner.selectedPackage,
       setActiveView,

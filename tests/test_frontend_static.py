@@ -44,6 +44,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ProvidersView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "PersonasView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ChatView.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "views" / "LogsView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useGraphPlanner.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasViewport.js").exists())
@@ -52,6 +53,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useChatSessions.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useProviderSettings.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "usePersonaSettings.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useLogs.js").exists())
         vite_config = (ROOT / "vite.config.js").read_text(encoding="utf-8")
         self.assertIn("@vitejs/plugin-vue", vite_config)
         self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
@@ -66,6 +68,7 @@ class FrontendStaticTests(unittest.TestCase):
             "nodes.css": [".graph-node", ".port", ".display-node-result"],
             "settings.css": [".providers-shell", ".provider-card", ".persona-card"],
             "chat.css": [".chat-shell", ".trace-panel", ".composer"],
+            "logs.css": [".logs-shell", ".log-entry", ".log-level"],
             "responsive.css": ["@media (max-width: 980px)", ".planner-workbench", ".chat-shell"],
         }
         for filename, selectors in expected_files.items():
@@ -129,6 +132,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("{id: \"providers\", label: \"Providers\"}", js)
         self.assertIn("{id: \"personas\", label: \"Personas\"}", js)
         self.assertIn("{id: \"chat\", label: \"Chat\"}", js)
+        self.assertIn("{id: \"logs\", label: \"Logs\"}", js)
         self.assertIn("data-view=\"providers\"", html)
         self.assertIn("data-view=\"personas\"", html)
         self.assertIn("id=\"provider-form\"", html)
@@ -295,6 +299,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("import ProvidersView from \"./views/ProvidersView.vue\"", app_source)
         self.assertIn("import PersonasView from \"./views/PersonasView.vue\"", app_source)
         self.assertIn("import ChatView from \"./views/ChatView.vue\"", app_source)
+        self.assertIn("import LogsView from \"./views/LogsView.vue\"", app_source)
         self.assertIn("import {useGraphPlanner} from \"./composables/useGraphPlanner.js\"", app_source)
         self.assertIn("import {useCanvasInteractions} from \"./composables/useCanvasInteractions.js\"", app_source)
         self.assertIn("import {useChatSessions} from \"./composables/useChatSessions.js\"", app_source)
@@ -449,6 +454,34 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertNotIn(".result-toggle-hint", css)
         self.assertNotIn(".result-section > summary", css)
         self.assertIn("height: 100%", css)
+
+    def test_logs_view_is_in_single_index_shell(self):
+        html = read_frontend_sources(".vue")
+        js = read_frontend_sources(".vue", ".js")
+        css = read_frontend_css()
+
+        self.assertIn("data-view=\"logs\"", html)
+        self.assertIn("id=\"logs-view\"", html)
+        self.assertIn("id=\"refresh-logs\"", html)
+        self.assertIn("id=\"clear-logs\"", html)
+        self.assertIn("class=\"view logs-shell\"", html)
+        self.assertIn("class=\"log-entry\"", html)
+        self.assertIn("class=\"log-level\"", html)
+        self.assertIn("class=\"log-source\"", html)
+        self.assertIn("class=\"log-details\"", html)
+        self.assertIn("JSON.stringify(log.details || {}, null, 2)", html)
+        self.assertIn("loadLogs", js)
+        self.assertIn("clearLogs", js)
+        self.assertIn("useLogs", js)
+        self.assertIn("\"/api/logs\"", js)
+        self.assertIn("fetch(apiUrl(\"/api/logs\"), {method: \"DELETE\"})", js)
+        self.assertIn("refreshLogs", js)
+        self.assertIn("clearLogEntries", js)
+        self.assertIn(".logs-shell", css)
+        self.assertIn(".logs-toolbar", css)
+        self.assertIn(".log-entry.level-error", css)
+        self.assertIn(".log-details pre", css)
+        self.assertIn("overflow-wrap: anywhere", css)
 
     def test_frontend_app_delegates_planner_and_canvas_logic_to_composables(self):
         app_source = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")

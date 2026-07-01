@@ -61,6 +61,24 @@ class WebChatTests(unittest.TestCase):
         self.assertEqual(reloaded.load_providers(), [{"id": "provider"}])
         self.assertEqual(reloaded.load_personas(), [{"persona_id": "persona"}])
 
+    def test_graph_config_store_persists_bounded_logs(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            data_file = Path(tmpdir) / "flainbot_state.json"
+            store = web_chat.GraphConfigStore(data_file=data_file, max_logs=2)
+
+            store.append_log("info", "api", "first event", {"index": 1})
+            store.append_log("error", "runtime", "second event", {"index": 2})
+            store.append_log("info", "api", "third event", {"index": 3})
+            reloaded = web_chat.GraphConfigStore(data_file=data_file, max_logs=2)
+
+        logs = reloaded.load_logs()
+        self.assertEqual([log["message"] for log in logs], ["second event", "third event"])
+        self.assertEqual(logs[0]["level"], "error")
+        self.assertEqual(logs[0]["source"], "runtime")
+        self.assertEqual(logs[0]["details"], {"index": 2})
+        self.assertIn("timestamp", logs[0])
+        self.assertIn("id", logs[0])
+
     def test_graph_config_store_migrates_legacy_session_contexts_to_default_session(self):
         store = web_chat.GraphConfigStore(
             initial_config={
@@ -306,6 +324,88 @@ class WebChatTests(unittest.TestCase):
                         "sessions": [{"id": "default", "title": "Default", "contexts": []}],
                     },
                 )
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_logs_api_lists_and_clears_log_entries(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            body = json.dumps({"nodes": [], "edges": []}).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/graph",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with request.urlopen(req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/logs", timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+            self.assertEqual(payload["logs"][-1]["level"], "info")
+            self.assertEqual(payload["logs"][-1]["source"], "config")
+            self.assertEqual(payload["logs"][-1]["message"], "Graph config saved")
+
+            clear_req = request.Request(f"{base_url}/api/logs", method="DELETE")
+            with request.urlopen(clear_req, timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"status": "ok"})
+
+            with request.urlopen(f"{base_url}/api/logs", timeout=5) as response:
+                self.assertEqual(json.loads(response.read().decode("utf-8")), {"logs": []})
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_chat_api_logs_runtime_exceptions_as_json_errors(self):
+        store = web_chat.GraphConfigStore(
+            initial_config={
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "persona_1", "type": "persona", "props": {"persona_id": "LG"}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "persona_1", "to_port": "text"},
+                    {"from_node": "persona_1", "from_port": "json", "to_node": "chat_output_1", "to_port": "text"},
+                ],
+                "personas": [],
+            }
+        )
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            body = json.dumps({"message": "hello", "session_id": "default"}).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/chat",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(request.HTTPError) as error_context:
+                request.urlopen(req, timeout=5)
+
+            self.assertEqual(error_context.exception.code, 500)
+            error_payload = json.loads(error_context.exception.read().decode("utf-8"))
+            self.assertEqual(error_payload["error"], "persona not found: LG")
+
+            logs = store.load_logs()
+            self.assertEqual(logs[-1]["level"], "error")
+            self.assertEqual(logs[-1]["source"], "runtime")
+            self.assertEqual(logs[-1]["message"], "Chat request failed")
+            self.assertEqual(logs[-1]["details"]["endpoint"], "/api/chat")
+            self.assertEqual(logs[-1]["details"]["error_type"], "ValueError")
+            self.assertIn("persona not found: LG", logs[-1]["details"]["error"])
+            self.assertIn("Traceback", logs[-1]["details"]["traceback"])
         finally:
             server.shutdown()
             server.server_close()
