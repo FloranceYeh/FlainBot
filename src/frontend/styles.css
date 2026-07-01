@@ -843,6 +843,7 @@ code {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 180px;
+  height: 220px;
   min-height: 220px;
   resize: both;
   overflow: auto;
