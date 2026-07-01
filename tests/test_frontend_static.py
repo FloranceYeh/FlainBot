@@ -33,6 +33,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ProvidersView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "PersonasView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ChatView.vue").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useGraphPlanner.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").exists())
         vite_config = (ROOT / "vite.config.js").read_text(encoding="utf-8")
         self.assertIn("@vitejs/plugin-vue", vite_config)
         self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
@@ -144,7 +146,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("JSON.stringify(persona.tools || [], null, 2)", js)
         self.assertIn("node.type === 'persona'", js)
         self.assertIn("loadNodeCatalog", js)
-        self.assertIn("nodeCatalog.value = await loadNodeCatalog()", js)
+        self.assertIn("planner.setNodeCatalog(await loadNodeCatalog())", js)
         self.assertIn("generatePython", js)
         self.assertIn("edges", js)
         self.assertIn("GraphExecutor", js)
@@ -233,6 +235,8 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("import ProvidersView from \"./views/ProvidersView.vue\"", app_source)
         self.assertIn("import PersonasView from \"./views/PersonasView.vue\"", app_source)
         self.assertIn("import ChatView from \"./views/ChatView.vue\"", app_source)
+        self.assertIn("import {useGraphPlanner} from \"./composables/useGraphPlanner.js\"", app_source)
+        self.assertIn("import {useCanvasInteractions} from \"./composables/useCanvasInteractions.js\"", app_source)
         self.assertNotIn("const PortList = defineComponent", app_source)
         self.assertNotIn("const NodeCard = defineComponent", app_source)
         self.assertNotIn("const CatalogGroup = defineComponent", app_source)
@@ -247,7 +251,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("result-rail collapsed", js)
         self.assertIn("Could not load node catalog", js)
         self.assertIn("const nodeCatalog = ref([])", js)
-        self.assertIn("nodeCatalog.value = await loadNodeCatalog()", js)
+        self.assertIn("planner.setNodeCatalog(await loadNodeCatalog())", js)
         self.assertIn("loadGraph", js)
         self.assertIn("\"/api/graph\"", js)
         self.assertIn("restoreGraph(savedGraph)", js)
@@ -383,6 +387,36 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertNotIn(".result-section > summary", css)
         self.assertIn("height: 100%", css)
 
+    def test_frontend_app_delegates_planner_and_canvas_logic_to_composables(self):
+        app_source = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+        graph_planner = (ROOT / "src" / "frontend" / "composables" / "useGraphPlanner.js").read_text(encoding="utf-8")
+        canvas_interactions = (ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").read_text(encoding="utf-8")
+
+        self.assertIn("export function useGraphPlanner", graph_planner)
+        self.assertIn("export function useCanvasInteractions", canvas_interactions)
+        self.assertIn("const planner = useGraphPlanner", app_source)
+        self.assertIn("const canvas = useCanvasInteractions", app_source)
+
+        for function_name in [
+            "normalizeGraphCenter",
+            "addNode",
+            "removeNode",
+            "serializeGraph",
+            "restoreGraph",
+        ]:
+            self.assertIn(f"function {function_name}", graph_planner)
+            self.assertNotIn(f"function {function_name}", app_source)
+
+        for function_name in [
+            "canvasPointFromEvent",
+            "handleCanvasDrop",
+            "startDrag",
+            "dragMove",
+            "zoomCanvas",
+            "finishConnectionDrag",
+        ]:
+            self.assertIn(f"function {function_name}", canvas_interactions)
+            self.assertNotIn(f"function {function_name}", app_source)
     def test_standalone_chat_assets_were_removed(self):
         self.assertFalse((ROOT / "frontend" / "chat.html").exists())
         self.assertFalse((ROOT / "frontend" / "chat.js").exists())
