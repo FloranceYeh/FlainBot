@@ -337,10 +337,14 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn(".chat-shell", css)
         self.assertIn(".trace-panel", css)
         self.assertIn(".trace-panel[open]", css)
+        self.assertIn(".trace-panel:not([open])", css)
+        trace_closed_css = css.split(".trace-panel:not([open])", 1)[1].split("}", 1)[0]
         trace_open_css = css.split(".trace-panel[open]", 1)[1].split("}", 1)[0]
         trace_pre_css = css.split(".trace-panel pre", 1)[1].split("}", 1)[0]
         self.assertIn("overflow-wrap: anywhere", css)
         self.assertIn("white-space: pre-wrap", css)
+        self.assertIn("height: auto", trace_closed_css)
+        self.assertIn("resize: none", trace_closed_css)
         self.assertIn("resize: both", trace_open_css)
         self.assertIn("min-width: 180px", trace_open_css)
         self.assertIn("\n  height: 220px;\n", trace_open_css)
