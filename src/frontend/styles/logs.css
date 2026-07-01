@@ -20,7 +20,7 @@
 
 .logs-header h2,
 .logs-header p,
-.log-main h3 {
+.log-main h4 {
   margin: 0;
 }
 
@@ -52,15 +52,61 @@
   overflow-y: auto;
 }
 
-.log-entry {
+.run-log-group {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   border: 1px solid var(--panel-border);
   border-left: 4px solid var(--accent);
   border-radius: 8px;
   padding: 12px;
   background: #ffffff;
+}
+
+.run-log-group.level-error {
+  border-left-color: var(--danger);
+}
+
+.run-log-group.level-error > .run-log-header .log-level {
+  color: var(--danger);
+  background: #fff1f0;
+}
+
+.run-log-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.run-log-header h3 {
+  margin: 8px 0 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.run-log-count {
+  flex: 0 0 auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.run-log-events {
+  display: grid;
+  gap: 8px;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--panel-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px;
+  background: #fbfcfe;
 }
 
 .log-entry.level-error {
@@ -104,8 +150,8 @@
   min-width: 0;
 }
 
-.log-main h3 {
-  font-size: 15px;
+.log-main h4 {
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 

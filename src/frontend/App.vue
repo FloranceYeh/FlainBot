@@ -100,6 +100,7 @@
       />
       <LogsView
         :active="activeView === 'logs'"
+        :filtered-log-groups="filteredLogGroups"
         :filtered-logs="filteredLogs"
         :level-options="logLevelOptions"
         :logs="logs"
@@ -107,7 +108,6 @@
         v-model:selected-level="selectedLogLevel"
         v-model:selected-source="selectedLogSource"
         @clear="clearLogEntries"
-        @refresh="refreshLogs"
       />
     </main>
   </div>
@@ -120,7 +120,7 @@
 </template>
 
 <script>
-import {defineComponent, onMounted, reactive, ref} from "vue";
+import {defineComponent, onBeforeUnmount, onMounted, reactive, ref} from "vue";
 import GraphCanvas from "./components/GraphCanvas.vue";
 import NodePreview from "./components/NodePreview.vue";
 import NodeShelf from "./components/NodeShelf.vue";
@@ -266,6 +266,7 @@ export default defineComponent({
         personaSettings.personas.value = savedGraph.personas || await loadPersonas();
         chat.restoreSessions(await loadSessions());
         await logState.refreshLogs();
+        logState.startLogStream();
       } catch (error) {
         setStatus(error.message, "error");
       }
@@ -275,6 +276,9 @@ export default defineComponent({
     onMounted(() => {
       window.addEventListener("hashchange", () => setActiveView(activeViewFromHash()));
       init();
+    });
+    onBeforeUnmount(() => {
+      logState.stopLogStream();
     });
 
     return {
@@ -292,6 +296,7 @@ export default defineComponent({
       editPersona: personaSettings.editPersona,
       editProvider: providerSettings.editProvider,
       clearLogEntries: logState.clearLogEntries,
+      filteredLogGroups: logState.filteredLogGroups,
       filteredLogs: logState.filteredLogs,
       handleCanvasPointerMove: canvas.handleCanvasPointerMove,
       handleCanvasPointerUp: canvas.handleCanvasPointerUp,
@@ -330,7 +335,6 @@ export default defineComponent({
       renderedEdges: canvas.renderedEdges,
       resetGraph,
       resultRailCollapsed,
-      refreshLogs: logState.refreshLogs,
       selectNode: planner.selectNode,
       selectSession: chat.selectSession,
       selectedId: planner.selectedId,

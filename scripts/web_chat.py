@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
+from queue import Empty, Queue
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import sys
 import traceback
 from datetime import datetime, timezone
+from threading import RLock
 from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,6 +114,8 @@ class GraphConfigStore:
     ) -> None:
         self._data_file = Path(data_file) if data_file is not None else None
         self._max_logs = max_logs
+        self._lock = RLock()
+        self._log_subscribers: set[Queue] = set()
         if initial_config is not None:
             self._config = normalize_config(initial_config)
             self._persist()
@@ -119,11 +123,13 @@ class GraphConfigStore:
         self._config = normalize_config(self._load_from_file() if self._data_file else empty_config())
 
     def save(self, config: dict) -> None:
-        self._config = normalize_config({**config, "logs": self.load_logs()})
-        self._persist()
+        with self._lock:
+            self._config = normalize_config({**config, "logs": self.load_logs()})
+            self._persist()
 
     def load(self) -> dict:
-        return public_config(self._config)
+        with self._lock:
+            return public_config(self._config)
 
     def append_log(self, level: str, source: str, message: str, details: dict | None = None) -> dict:
         log = {
@@ -134,17 +140,35 @@ class GraphConfigStore:
             "message": message,
             "details": details or {},
         }
-        logs = [*self.load_logs(), log][-self._max_logs :]
-        self._config = normalize_config({**self._config, "logs": logs})
-        self._persist()
+        with self._lock:
+            logs = [*self.load_logs(), log][-self._max_logs :]
+            self._config = normalize_config({**self._config, "logs": logs})
+            self._persist()
+            subscribers = list(self._log_subscribers)
+        for subscriber in subscribers:
+            subscriber.put(log)
         return log
 
     def load_logs(self) -> list[dict]:
-        return self._config.get("logs", [])
+        with self._lock:
+            return list(self._config.get("logs", []))
 
     def clear_logs(self) -> None:
-        self._config = normalize_config({**self._config, "logs": []})
-        self._persist()
+        with self._lock:
+            self._config = normalize_config({**self._config, "logs": []})
+            self._persist()
+
+    def register_log_stream(self) -> Queue:
+        subscriber: Queue = Queue()
+        with self._lock:
+            for log in self.load_logs():
+                subscriber.put(log)
+            self._log_subscribers.add(subscriber)
+        return subscriber
+
+    def unregister_log_stream(self, subscriber: Queue) -> None:
+        with self._lock:
+            self._log_subscribers.discard(subscriber)
 
     def save_sessions(self, sessions: list[dict], active_session_id: str | None = None) -> None:
         active_id = active_session_id or self._config.get("active_session_id") or "default"
@@ -224,6 +248,7 @@ def run_chat(
     store: GraphConfigStore,
     session_id: str | None = None,
     transports=None,
+    run_id: str | None = None,
 ) -> dict[str, str]:
     config = store.load()
     active_session_id = session_id or config.get("active_session_id")
@@ -234,6 +259,7 @@ def run_chat(
             event["message"],
             event["details"],
         ),
+        run_id=run_id,
         session_id=active_session_id,
     )
     graph = build_graph_from_config(
@@ -287,6 +313,9 @@ def make_handler(store: GraphConfigStore):
                 return
             if self.path == "/api/logs":
                 self.send_json({"logs": store.load_logs()})
+                return
+            if self.path == "/api/logs/stream":
+                self.stream_logs()
                 return
 
             file_path = static_file_path(self.path)
@@ -345,9 +374,15 @@ def make_handler(store: GraphConfigStore):
             payload = self.read_json()
             session_id = payload.get("session_id")
             active_session_id = session_id or store.load().get("active_session_id")
-            store.append_log("info", "runtime", "Chat request started", {"session_id": active_session_id})
+            run_id = f"run_{uuid4().hex}"
+            store.append_log(
+                "info",
+                "runtime",
+                "Chat request started",
+                {"run_id": run_id, "session_id": active_session_id},
+            )
             try:
-                result = run_chat(payload["message"], store, session_id=session_id)
+                result = run_chat(payload["message"], store, session_id=session_id, run_id=run_id)
             except Exception as error:
                 error_details = error_response_details(error)
                 store.append_log(
@@ -356,6 +391,7 @@ def make_handler(store: GraphConfigStore):
                     "Chat request failed",
                     {
                         "endpoint": "/api/chat",
+                        "run_id": run_id,
                         "session_id": active_session_id,
                         **error_details,
                         "error": str(error),
@@ -369,6 +405,7 @@ def make_handler(store: GraphConfigStore):
                 "runtime",
                 "Chat request completed",
                 {
+                    "run_id": run_id,
                     "session_id": active_session_id,
                     "replies": len(result.get("replies", [])),
                     "trace": len(result.get("trace", [])),
@@ -404,6 +441,7 @@ def make_handler(store: GraphConfigStore):
                 "/api/personas",
                 "/api/sessions",
                 "/api/logs",
+                "/api/logs/stream",
             }:
                 self.send_error(404)
                 return
@@ -430,6 +468,28 @@ def make_handler(store: GraphConfigStore):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+        def stream_logs(self) -> None:
+            subscriber = store.register_log_stream()
+            self.send_response(200)
+            self.send_cors_headers()
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+            try:
+                while True:
+                    try:
+                        log = subscriber.get(timeout=1)
+                    except Empty:
+                        continue
+                    body = f"data: {json.dumps(log)}\n\n".encode("utf-8")
+                    self.wfile.write(body)
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionError, OSError):
+                return
+            finally:
+                store.unregister_log_stream(subscriber)
 
         def log_message(self, format: str, *args) -> None:
             return

@@ -373,6 +373,105 @@ class WebChatTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_logs_stream_sends_appended_log_events(self):
+        store = web_chat.GraphConfigStore()
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+        received = {}
+
+        def read_stream():
+            with request.urlopen(f"{base_url}/api/logs/stream", timeout=5) as response:
+                received["headers"] = response.headers
+                received["line"] = response.readline().decode("utf-8").strip()
+
+        stream_thread = threading.Thread(target=read_stream, daemon=True)
+        stream_thread.start()
+
+        try:
+            store.append_log("info", "runtime", "stream event", {"run_id": "run_1"})
+            stream_thread.join(timeout=3)
+
+            self.assertIn("line", received)
+            self.assertEqual(received["headers"]["Content-Type"], "text/event-stream")
+            self.assertTrue(received["line"].startswith("data: "))
+            payload = json.loads(received["line"].removeprefix("data: "))
+            self.assertEqual(payload["message"], "stream event")
+            self.assertEqual(payload["details"]["run_id"], "run_1")
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_chat_api_logs_one_run_id_for_request_and_node_events(self):
+        store = web_chat.GraphConfigStore(
+            initial_config={
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "echo_1", "type": "provider_call", "props": {"provider_id": "openai_main"}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "echo_1", "to_port": "text"},
+                    {"from_node": "echo_1", "from_port": "text", "to_node": "chat_output_1", "to_port": "text"},
+                ],
+                "providers": [
+                    {
+                        "id": "openai_main",
+                        "format": "openai_chat",
+                        "base_url": "x",
+                        "api_key": "k",
+                        "model": "m",
+                    }
+                ],
+            }
+        )
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            body = json.dumps({"message": "hello", "session_id": "default"}).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/chat",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            original_run_chat = web_chat.run_chat
+            with patch("scripts.web_chat.run_chat") as run_chat:
+                run_chat.side_effect = lambda message, store, session_id=None, transports=None, run_id=None: original_run_chat(
+                    message,
+                    store,
+                    session_id=session_id,
+                    transports={
+                        "openai_chat": lambda url, headers, body: {
+                            "choices": [{"message": {"content": "echo: hello"}}]
+                        }
+                    },
+                    run_id=run_id,
+                )
+                with request.urlopen(req, timeout=5) as response:
+                    self.assertEqual(json.loads(response.read().decode("utf-8"))["reply"], "echo: hello")
+
+            runtime_logs = [log for log in store.load_logs() if log["source"] == "runtime"]
+            node_logs = [log for log in store.load_logs() if log["source"] == "node"]
+            run_ids = {
+                log["details"].get("run_id")
+                for log in [*runtime_logs, *node_logs]
+                if log["details"].get("run_id")
+            }
+            self.assertEqual(len(run_ids), 1)
+            self.assertEqual([log["message"] for log in runtime_logs], ["Chat request started", "Chat request completed"])
+            self.assertEqual(
+                [log["details"]["event"] for log in node_logs],
+                ["chat_input.received", "provider_call.started", "provider_call.completed", "chat_output.completed"],
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+
     def test_chat_api_logs_runtime_exceptions_as_json_errors(self):
         store = web_chat.GraphConfigStore(
             initial_config={

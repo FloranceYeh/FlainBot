@@ -48,6 +48,10 @@ export function loadLogs() {
   return fetchJson("/api/logs", "Could not load logs");
 }
 
+export function logStreamUrl() {
+  return apiUrl("/api/logs/stream");
+}
+
 export async function postJson(path, payload, errorPrefix) {
   let response;
   try {

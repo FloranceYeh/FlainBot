@@ -1,4 +1,7 @@
 import {
+  groupLogsByRun,
+} from "../src/frontend/logs.js";
+import {
   connectionArrow,
   connectionPath,
   graphNodeCenter,
@@ -188,4 +191,48 @@ if (scaledDrag.x !== 200 || scaledDrag.y !== -110) {
 const centeredDrop = nodePositionFromCenter({x: 300, y: 240});
 if (centeredDrop.x !== 165 || centeredDrop.y !== 105) {
   throw new Error("dropped nodes should use the mouse as the node center, not the top-left corner");
+}
+
+const groupedLogs = groupLogsByRun([
+  {
+    id: "log_1",
+    timestamp: "2026-07-01T01:00:00+00:00",
+    level: "info",
+    source: "runtime",
+    message: "Chat request started",
+    details: {run_id: "run_1", session_id: "default"},
+  },
+  {
+    id: "log_2",
+    timestamp: "2026-07-01T01:00:01+00:00",
+    level: "info",
+    source: "node",
+    message: "Node started",
+    details: {run_id: "run_1", node_id: "chat_input"},
+  },
+  {
+    id: "log_3",
+    timestamp: "2026-07-01T01:00:02+00:00",
+    level: "error",
+    source: "runtime",
+    message: "Chat request failed",
+    details: {run_id: "run_1", error_type: "ValueError"},
+  },
+  {
+    id: "log_4",
+    timestamp: "2026-07-01T02:00:00+00:00",
+    level: "info",
+    source: "config",
+    message: "Graph config saved",
+    details: {nodes: 2},
+  },
+]);
+if (groupedLogs.length !== 2 || groupedLogs[0].id !== "run_1" || groupedLogs[0].logs.length !== 3) {
+  throw new Error("runtime logs from the same run_id should render as one grouped execution");
+}
+if (groupedLogs[0].level !== "error" || groupedLogs[0].title !== "Chat request failed") {
+  throw new Error("run log groups should surface the most severe/latest execution state");
+}
+if (groupedLogs[1].id !== "log_4" || groupedLogs[1].logs.length !== 1) {
+  throw new Error("logs without run_id should remain individually addressable");
 }
