@@ -35,6 +35,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ChatView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useGraphPlanner.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useChatSessions.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useProviderSettings.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "usePersonaSettings.js").exists())
         vite_config = (ROOT / "vite.config.js").read_text(encoding="utf-8")
         self.assertIn("@vitejs/plugin-vue", vite_config)
         self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
@@ -237,6 +240,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("import ChatView from \"./views/ChatView.vue\"", app_source)
         self.assertIn("import {useGraphPlanner} from \"./composables/useGraphPlanner.js\"", app_source)
         self.assertIn("import {useCanvasInteractions} from \"./composables/useCanvasInteractions.js\"", app_source)
+        self.assertIn("import {useChatSessions} from \"./composables/useChatSessions.js\"", app_source)
+        self.assertIn("import {useProviderSettings} from \"./composables/useProviderSettings.js\"", app_source)
+        self.assertIn("import {usePersonaSettings} from \"./composables/usePersonaSettings.js\"", app_source)
         self.assertNotIn("const PortList = defineComponent", app_source)
         self.assertNotIn("const NodeCard = defineComponent", app_source)
         self.assertNotIn("const CatalogGroup = defineComponent", app_source)
@@ -417,6 +423,46 @@ class FrontendStaticTests(unittest.TestCase):
         ]:
             self.assertIn(f"function {function_name}", canvas_interactions)
             self.assertNotIn(f"function {function_name}", app_source)
+
+    def test_frontend_app_delegates_chat_and_settings_logic_to_composables(self):
+        app_source = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
+        chat_sessions = (ROOT / "src" / "frontend" / "composables" / "useChatSessions.js").read_text(encoding="utf-8")
+        provider_settings = (ROOT / "src" / "frontend" / "composables" / "useProviderSettings.js").read_text(encoding="utf-8")
+        persona_settings = (ROOT / "src" / "frontend" / "composables" / "usePersonaSettings.js").read_text(encoding="utf-8")
+
+        self.assertIn("export function useChatSessions", chat_sessions)
+        self.assertIn("export function useProviderSettings", provider_settings)
+        self.assertIn("export function usePersonaSettings", persona_settings)
+        self.assertIn("const chat = useChatSessions", app_source)
+        self.assertIn("const providerSettings = useProviderSettings", app_source)
+        self.assertIn("const personaSettings = usePersonaSettings", app_source)
+
+        for function_name in [
+            "restoreSessions",
+            "syncMessagesFromActiveSession",
+            "handleNewSession",
+            "handleDeleteSession",
+            "handleChatSubmit",
+        ]:
+            self.assertIn(f"function {function_name}", chat_sessions)
+            self.assertNotIn(f"function {function_name}", app_source)
+
+        for function_name in [
+            "handleProviderSubmit",
+            "editProvider",
+            "removeProvider",
+        ]:
+            self.assertIn(f"function {function_name}", provider_settings)
+            self.assertNotIn(f"function {function_name}", app_source)
+
+        for function_name in [
+            "handlePersonaSubmit",
+            "editPersona",
+            "removePersona",
+        ]:
+            self.assertIn(f"function {function_name}", persona_settings)
+            self.assertNotIn(f"function {function_name}", app_source)
+
     def test_standalone_chat_assets_were_removed(self):
         self.assertFalse((ROOT / "frontend" / "chat.html").exists())
         self.assertFalse((ROOT / "frontend" / "chat.js").exists())
