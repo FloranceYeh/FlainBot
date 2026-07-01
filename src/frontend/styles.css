@@ -839,6 +839,15 @@ code {
   padding-top: 8px;
 }
 
+.trace-panel[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 180px;
+  min-height: 220px;
+  resize: both;
+  overflow: auto;
+}
+
 .trace-panel summary {
   cursor: pointer;
   color: var(--muted);
@@ -846,15 +855,12 @@ code {
 }
 
 .trace-panel pre {
-  width: 100%;
   max-width: 100%;
-  max-height: 220px;
-  min-width: 180px;
-  min-height: 0;
+  height: calc(100% - 24px);
+  min-height: 120px;
   margin-top: 8px;
   overflow: auto;
   padding: 10px;
-  resize: both;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
