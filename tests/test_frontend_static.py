@@ -46,6 +46,9 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertTrue((ROOT / "src" / "frontend" / "views" / "ChatView.vue").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useGraphPlanner.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useCanvasViewport.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useNodeDrag.js").exists())
+        self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useConnectionDrag.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useChatSessions.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "useProviderSettings.js").exists())
         self.assertTrue((ROOT / "src" / "frontend" / "composables" / "usePersonaSettings.js").exists())
@@ -468,15 +471,38 @@ class FrontendStaticTests(unittest.TestCase):
             self.assertNotIn(f"function {function_name}", app_source)
 
         for function_name in [
-            "canvasPointFromEvent",
             "handleCanvasDrop",
             "startDrag",
-            "dragMove",
             "zoomCanvas",
             "finishConnectionDrag",
         ]:
-            self.assertIn(f"function {function_name}", canvas_interactions)
+            self.assertIn(function_name, canvas_interactions)
             self.assertNotIn(f"function {function_name}", app_source)
+
+    def test_canvas_interactions_are_split_by_interaction_type(self):
+        canvas_interactions = (ROOT / "src" / "frontend" / "composables" / "useCanvasInteractions.js").read_text(encoding="utf-8")
+        viewport = (ROOT / "src" / "frontend" / "composables" / "useCanvasViewport.js").read_text(encoding="utf-8")
+        node_drag = (ROOT / "src" / "frontend" / "composables" / "useNodeDrag.js").read_text(encoding="utf-8")
+        connection_drag = (ROOT / "src" / "frontend" / "composables" / "useConnectionDrag.js").read_text(encoding="utf-8")
+
+        self.assertIn("import {useCanvasViewport}", canvas_interactions)
+        self.assertIn("import {useNodeDrag}", canvas_interactions)
+        self.assertIn("import {useConnectionDrag}", canvas_interactions)
+        self.assertIn("export function useCanvasViewport", viewport)
+        self.assertIn("export function useNodeDrag", node_drag)
+        self.assertIn("export function useConnectionDrag", connection_drag)
+
+        for function_name in ["canvasPointFromEvent", "zoomCanvas", "startCanvasPan", "moveCanvasPan", "endCanvasPan"]:
+            self.assertIn(f"function {function_name}", viewport)
+            self.assertNotIn(f"function {function_name}", canvas_interactions)
+
+        for function_name in ["handleCanvasDrop", "startDrag", "dragMove", "dragEnd", "moveNodePreview"]:
+            self.assertIn(f"function {function_name}", node_drag)
+            self.assertNotIn(f"function {function_name}", canvas_interactions)
+
+        for function_name in ["portCenter", "startConnectionDrag", "moveConnectionDrag", "finishConnectionDrag"]:
+            self.assertIn(f"function {function_name}", connection_drag)
+            self.assertNotIn(f"function {function_name}", canvas_interactions)
 
     def test_frontend_app_delegates_chat_and_settings_logic_to_composables(self):
         app_source = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
