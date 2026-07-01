@@ -33,6 +33,10 @@
         </div>
         <div class="log-main">
           <h3>{{ log.message }}</h3>
+          <div class="log-facts">
+            <span v-if="log.details?.event" class="log-event">{{ log.details.event }}</span>
+            <span v-if="log.details?.node_id" class="log-node">{{ log.details.node_id }}</span>
+          </div>
           <details v-if="Object.keys(log.details || {}).length > 0" class="log-details">
             <summary>Details</summary>
             <pre><code>{{ JSON.stringify(log.details || {}, null, 2) }}</code></pre>

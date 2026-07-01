@@ -11,6 +11,22 @@ class GraphError(RuntimeError):
     pass
 
 
+class NodeExecutionError(GraphError):
+    def __init__(self, node_id: str, node_type: str, original: Exception) -> None:
+        self.node_id = node_id
+        self.node_type = node_type
+        self.original = original
+        super().__init__(f"node {node_id} failed: {original}")
+
+
+class NodeBuildError(GraphError):
+    def __init__(self, node_id: str, node_type: str, original: Exception) -> None:
+        self.node_id = node_id
+        self.node_type = node_type
+        self.original = original
+        super().__init__(f"node {node_id} failed to build: {original}")
+
+
 @dataclass(frozen=True)
 class GraphEdge:
     from_node: str
@@ -69,7 +85,11 @@ class GraphExecutor:
             node_inputs = self._inputs_for(node_id, outputs)
             if inputs and node_id in inputs:
                 node_inputs.update(inputs[node_id])
-            outputs[node_id] = self._graph.nodes[node_id].run(node_inputs)
+            node = self._graph.nodes[node_id]
+            try:
+                outputs[node_id] = node.run(node_inputs)
+            except Exception as exc:
+                raise NodeExecutionError(node_id, getattr(node, "name", type(node).__name__), exc) from exc
             self._trace.append(
                 {
                     "node_id": node_id,

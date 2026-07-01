@@ -8,6 +8,7 @@ import pkgutil
 from typing import Any
 
 from .providers import Transport
+from .runtime_logging import NullRuntimeLogger, RuntimeLogger
 
 NodeConfig = dict[str, Any]
 NodePackage = dict[str, Any]
@@ -21,6 +22,7 @@ class NodeBuildContext:
     providers: dict[str, dict[str, Any]]
     personas: dict[str, dict[str, Any]]
     session_contexts: list[dict[str, Any]] = field(default_factory=list)
+    logger: RuntimeLogger = field(default_factory=NullRuntimeLogger)
 
 
 class NodePackageRegistry:

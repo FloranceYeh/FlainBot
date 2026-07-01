@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-from flainbot import GraphExecutor
+from flainbot import GraphExecutor, NodeBuildError, NodeExecutionError, RuntimeLogger
 from flainbot.config import build_graph_from_config
 from flainbot.node_registry import discover_node_registry
 
@@ -226,11 +226,22 @@ def run_chat(
     transports=None,
 ) -> dict[str, str]:
     config = store.load()
+    active_session_id = session_id or config.get("active_session_id")
+    runtime_logger = RuntimeLogger(
+        sink=lambda event: store.append_log(
+            event["level"],
+            event["source"],
+            event["message"],
+            event["details"],
+        ),
+        session_id=active_session_id,
+    )
     graph = build_graph_from_config(
         config,
         message=message,
         transports=transports,
         session_contexts=store.session_contexts(session_id),
+        logger=runtime_logger,
     )
     executor = GraphExecutor(graph)
     outputs = executor.run()
@@ -338,6 +349,7 @@ def make_handler(store: GraphConfigStore):
             try:
                 result = run_chat(payload["message"], store, session_id=session_id)
             except Exception as error:
+                error_details = error_response_details(error)
                 store.append_log(
                     "error",
                     "runtime",
@@ -345,12 +357,12 @@ def make_handler(store: GraphConfigStore):
                     {
                         "endpoint": "/api/chat",
                         "session_id": active_session_id,
-                        "error_type": type(error).__name__,
+                        **error_details,
                         "error": str(error),
                         "traceback": traceback.format_exc(),
                     },
                 )
-                self.send_json({"error": str(error)}, status=500)
+                self.send_json({"error": str(error), "details": error_details}, status=500)
                 return
             store.append_log(
                 "info",
@@ -424,6 +436,24 @@ def make_handler(store: GraphConfigStore):
 
     WebChatHandler.store = store
     return WebChatHandler
+
+
+def error_response_details(error: Exception) -> dict[str, str]:
+    if isinstance(error, NodeBuildError):
+        return {
+            "node_id": error.node_id,
+            "node_type": error.node_type,
+            "error_type": type(error.original).__name__,
+            "phase": "build",
+        }
+    if isinstance(error, NodeExecutionError):
+        return {
+            "node_id": error.node_id,
+            "node_type": error.node_type,
+            "error_type": type(error.original).__name__,
+            "phase": "run",
+        }
+    return {"error_type": type(error).__name__}
 
 
 def static_root() -> Path:

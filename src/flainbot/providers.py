@@ -6,6 +6,8 @@ from typing import Any
 from urllib import request as urllib_request
 from urllib.error import HTTPError
 
+from .runtime_logging import NodeRuntimeLogger
+
 JsonObject = dict[str, Any]
 Transport = Callable[[str, dict[str, str], JsonObject], JsonObject]
 
@@ -25,20 +27,47 @@ def json_post(url: str, headers: dict[str, str], body: JsonObject) -> JsonObject
 class ProviderCallNode:
     name = "provider_call"
 
-    def __init__(self, provider: JsonObject, transport: Transport | None = None) -> None:
+    def __init__(
+        self,
+        provider: JsonObject,
+        transport: Transport | None = None,
+        logger: NodeRuntimeLogger | None = None,
+    ) -> None:
         self.provider = provider
         self.base_url = provider["base_url"].rstrip("/")
         self.api_key = provider["api_key"]
         self.model = provider["model"]
         self.format = provider["format"]
         self._transport = transport or json_post
+        self.logger = logger
 
     def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        if self.logger:
+            self.logger.info(
+                "provider_call.started",
+                provider_id=self.provider.get("id"),
+                format=self.format,
+                model=self.model,
+            )
         if self.format == "openai_chat":
-            return self._run_openai_chat(inputs)
+            outputs = self._run_openai_chat(inputs)
+        elif self.format == "anthropic_messages":
+            outputs = self._run_anthropic_messages(inputs)
+        else:
+            raise ValueError(f"unsupported provider format: {self.format}")
         if self.format == "anthropic_messages":
-            return self._run_anthropic_messages(inputs)
-        raise ValueError(f"unsupported provider format: {self.format}")
+            response_items = len(outputs.get("response", {}).get("content", []))
+        else:
+            response_items = len(outputs.get("response", {}).get("choices", []))
+        if self.logger:
+            self.logger.info(
+                "provider_call.completed",
+                provider_id=self.provider.get("id"),
+                format=self.format,
+                model=self.model,
+                response_items=response_items,
+            )
+        return outputs
 
     def _run_openai_chat(self, inputs: dict[str, Any]) -> dict[str, Any]:
         prompt_payload = prompt_payload_from_inputs(inputs)

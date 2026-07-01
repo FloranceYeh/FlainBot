@@ -131,6 +131,16 @@ class WebChatTests(unittest.TestCase):
         )
         self.assertEqual(reply["trace"][0]["outputs"], {"text": "hello"})
         self.assertEqual(reply["trace"][2]["outputs"], {"reply": "echo: hello"})
+        node_logs = [
+            log for log in store.load_logs()
+            if log["source"] == "node" and log["details"].get("node_id") == "echo_1"
+        ]
+        self.assertEqual(
+            [log["details"]["event"] for log in node_logs],
+            ["provider_call.started", "provider_call.completed"],
+        )
+        self.assertEqual(node_logs[0]["details"]["provider_id"], "openai_main")
+        self.assertEqual(node_logs[0]["details"]["model"], "m")
 
     def test_run_chat_can_echo_direct_input_to_output_graph(self):
         store = web_chat.GraphConfigStore()
@@ -375,6 +385,74 @@ class WebChatTests(unittest.TestCase):
                     {"from_node": "chat_input_1", "from_port": "text", "to_node": "persona_1", "to_port": "text"},
                     {"from_node": "persona_1", "from_port": "json", "to_node": "chat_output_1", "to_port": "text"},
                 ],
+                "personas": [
+                    {
+                        "persona_id": "LG",
+                        "system_prompt": "You are LG.",
+                        "begin_dialogs": ["lonely user turn"],
+                        "tools": [],
+                        "skills": [],
+                        "custom_error_message": None,
+                    }
+                ],
+            }
+        )
+        server = ThreadingHTTPServer(("127.0.0.1", 0), web_chat.make_handler(store))
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}"
+
+        try:
+            body = json.dumps({"message": "hello", "session_id": "default"}).encode("utf-8")
+            req = request.Request(
+                f"{base_url}/api/chat",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(request.HTTPError) as error_context:
+                request.urlopen(req, timeout=5)
+
+            self.assertEqual(error_context.exception.code, 500)
+            error_payload = json.loads(error_context.exception.read().decode("utf-8"))
+            self.assertEqual(error_payload["error"], "node persona_1 failed: persona begin_dialogs must contain user/assistant pairs")
+            self.assertEqual(
+                error_payload["details"],
+                {
+                    "node_id": "persona_1",
+                    "node_type": "persona",
+                    "error_type": "ValueError",
+                    "phase": "run",
+                },
+            )
+
+            logs = store.load_logs()
+            self.assertEqual(logs[-1]["level"], "error")
+            self.assertEqual(logs[-1]["source"], "runtime")
+            self.assertEqual(logs[-1]["message"], "Chat request failed")
+            self.assertEqual(logs[-1]["details"]["endpoint"], "/api/chat")
+            self.assertEqual(logs[-1]["details"]["node_id"], "persona_1")
+            self.assertEqual(logs[-1]["details"]["node_type"], "persona")
+            self.assertEqual(logs[-1]["details"]["error_type"], "ValueError")
+            self.assertEqual(logs[-1]["details"]["phase"], "run")
+            self.assertIn("persona begin_dialogs", logs[-1]["details"]["error"])
+            self.assertIn("Traceback", logs[-1]["details"]["traceback"])
+        finally:
+            server.shutdown()
+            server.server_close()
+
+    def test_chat_api_logs_node_build_errors_with_node_metadata(self):
+        store = web_chat.GraphConfigStore(
+            initial_config={
+                "nodes": [
+                    {"id": "chat_input_1", "type": "chat_input", "props": {}},
+                    {"id": "persona_1", "type": "persona", "props": {"persona_id": "LG"}},
+                    {"id": "chat_output_1", "type": "chat_output", "props": {}},
+                ],
+                "edges": [
+                    {"from_node": "chat_input_1", "from_port": "text", "to_node": "persona_1", "to_port": "text"},
+                    {"from_node": "persona_1", "from_port": "json", "to_node": "chat_output_1", "to_port": "text"},
+                ],
                 "personas": [],
             }
         )
@@ -396,16 +474,22 @@ class WebChatTests(unittest.TestCase):
 
             self.assertEqual(error_context.exception.code, 500)
             error_payload = json.loads(error_context.exception.read().decode("utf-8"))
-            self.assertEqual(error_payload["error"], "persona not found: LG")
+            self.assertEqual(error_payload["error"], "node persona_1 failed to build: persona not found: LG")
+            self.assertEqual(
+                error_payload["details"],
+                {
+                    "node_id": "persona_1",
+                    "node_type": "persona",
+                    "error_type": "ValueError",
+                    "phase": "build",
+                },
+            )
 
             logs = store.load_logs()
-            self.assertEqual(logs[-1]["level"], "error")
-            self.assertEqual(logs[-1]["source"], "runtime")
-            self.assertEqual(logs[-1]["message"], "Chat request failed")
-            self.assertEqual(logs[-1]["details"]["endpoint"], "/api/chat")
-            self.assertEqual(logs[-1]["details"]["error_type"], "ValueError")
+            self.assertEqual(logs[-1]["details"]["node_id"], "persona_1")
+            self.assertEqual(logs[-1]["details"]["node_type"], "persona")
+            self.assertEqual(logs[-1]["details"]["phase"], "build")
             self.assertIn("persona not found: LG", logs[-1]["details"]["error"])
-            self.assertIn("Traceback", logs[-1]["details"]["traceback"])
         finally:
             server.shutdown()
             server.server_close()

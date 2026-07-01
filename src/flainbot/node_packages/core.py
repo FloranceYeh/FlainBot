@@ -187,26 +187,32 @@ def get_node_builders() -> dict[str, NodeBuilder]:
 
 
 def build_chat_input(node_config: dict[str, Any], context: NodeBuildContext) -> ChatInputNode:
-    return ChatInputNode(context.message)
+    return ChatInputNode(context.message, logger=context.logger.for_node(node_config["id"], "chat_input"))
 
 
 def build_chat_output(node_config: dict[str, Any], context: NodeBuildContext) -> ChatOutputNode:
-    return ChatOutputNode()
+    return ChatOutputNode(logger=context.logger.for_node(node_config["id"], "chat_output"))
 
 
 def build_text_input(node_config: dict[str, Any], context: NodeBuildContext) -> TextInputNode:
-    return TextInputNode(node_config.get("props", {}).get("text", ""))
+    return TextInputNode(
+        node_config.get("props", {}).get("text", ""),
+        logger=context.logger.for_node(node_config["id"], "text_input"),
+    )
 
 
 def build_display_data(node_config: dict[str, Any], context: NodeBuildContext) -> DisplayDataNode:
-    return DisplayDataNode()
+    return DisplayDataNode(logger=context.logger.for_node(node_config["id"], "display_data"))
 
 
 def build_session_context(
     node_config: dict[str, Any],
     context: NodeBuildContext,
 ) -> SessionContextNode:
-    return SessionContextNode(context.session_contexts)
+    return SessionContextNode(
+        context.session_contexts,
+        logger=context.logger.for_node(node_config["id"], "session_context"),
+    )
 
 
 def build_prompt_builder(
@@ -219,6 +225,7 @@ def build_prompt_builder(
         user_prompt=props.get("user_prompt", ""),
         tools_json=props.get("tools_json", "[]"),
         contexts_json=props.get("contexts_json", "[]"),
+        logger=context.logger.for_node(node_config["id"], "prompt_builder"),
     )
 
 
@@ -227,7 +234,10 @@ def build_persona(node_config: dict[str, Any], context: NodeBuildContext) -> Per
     persona_id = props["persona_id"]
     if persona_id not in context.personas:
         raise ValueError(f"persona not found: {persona_id}")
-    return PersonaNode(persona=context.personas[persona_id])
+    return PersonaNode(
+        persona=context.personas[persona_id],
+        logger=context.logger.for_node(node_config["id"], "persona"),
+    )
 
 
 def build_provider_call(
@@ -242,4 +252,5 @@ def build_provider_call(
     return ProviderCallNode(
         provider=provider,
         transport=context.transports.get(provider["format"]),
+        logger=context.logger.for_node(node_config["id"], "provider_call"),
     )

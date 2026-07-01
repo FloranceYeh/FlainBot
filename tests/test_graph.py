@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from flainbot import Graph, GraphError, GraphExecutor
+from flainbot import Graph, GraphError, GraphExecutor, NodeExecutionError
 
 
 class GraphTests(unittest.TestCase):
@@ -112,6 +112,25 @@ class GraphTests(unittest.TestCase):
                 {"node_id": "upper", "inputs": {"text": "hello"}, "outputs": {"text": "HELLO"}},
             ],
         )
+
+    def test_graph_executor_wraps_node_errors_with_node_metadata(self):
+        class Fails:
+            name = "fails"
+
+            def run(self, inputs):
+                raise ValueError("bad input")
+
+        graph = Graph()
+        graph.add_node("bad_1", Fails())
+
+        with self.assertRaises(NodeExecutionError) as error_context:
+            GraphExecutor(graph).run()
+
+        error = error_context.exception
+        self.assertEqual(str(error), "node bad_1 failed: bad input")
+        self.assertEqual(error.node_id, "bad_1")
+        self.assertEqual(error.node_type, "fails")
+        self.assertIsInstance(error.original, ValueError)
 
     def test_graph_rejects_cycles(self):
         class Passthrough:
