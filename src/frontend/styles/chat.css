@@ -1,0 +1,159 @@
+﻿.chat-shell {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: min(880px, calc(100% - 32px));
+  height: calc(100% - 32px);
+  min-height: 0;
+  margin: 16px auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.chat-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.session-controls select {
+  min-height: 34px;
+  min-width: 160px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.messages {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.message {
+  max-width: 76%;
+  min-width: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+
+.message.user {
+  justify-self: end;
+  background: #e8f2fb;
+}
+
+.message.assistant {
+  justify-self: start;
+  background: #ffffff;
+}
+
+.message p {
+  margin: 0;
+}
+
+.trace-panel {
+  margin-top: 8px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 8px;
+}
+
+.trace-panel:not([open]) {
+  height: auto !important;
+  resize: none;
+  overflow: hidden;
+}
+
+.trace-panel[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 180px;
+  height: 220px;
+  min-height: 220px;
+  resize: both;
+  overflow: auto;
+}
+
+.trace-panel summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trace-panel pre {
+  max-width: 100%;
+  height: calc(100% - 24px);
+  min-height: 120px;
+  margin-top: 8px;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.trace-panel code {
+  white-space: inherit;
+  overflow-wrap: inherit;
+  word-break: inherit;
+}
+
+.composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 16px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.composer input,
+.composer button {
+  min-height: 40px;
+}
+
+.composer input {
+  min-width: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.composer button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  padding: 8px 14px;
+}
+
+.composer button:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #ffffff;
+}
+

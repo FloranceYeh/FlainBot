@@ -14,6 +14,13 @@ def read_frontend_sources(*suffixes):
     return "\n".join(parts)
 
 
+def read_frontend_css():
+    styles_root = ROOT / "src" / "frontend" / "styles"
+    parts = [(ROOT / "src" / "frontend" / "styles.css").read_text(encoding="utf-8")]
+    parts.extend(path.read_text(encoding="utf-8") for path in sorted(styles_root.glob("*.css")))
+    return "\n".join(parts)
+
+
 class FrontendStaticTests(unittest.TestCase):
     def test_vue_app_project_files_exist(self):
         package_json = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
@@ -42,6 +49,26 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("@vitejs/plugin-vue", vite_config)
         self.assertIn("vue/dist/vue.esm-bundler.js", vite_config)
         self.assertIn("outDir: \"frontend/dist\"", vite_config)
+
+    def test_frontend_styles_are_split_by_surface(self):
+        styles_root = ROOT / "src" / "frontend" / "styles"
+        entry = (ROOT / "src" / "frontend" / "styles.css").read_text(encoding="utf-8")
+        expected_files = {
+            "base.css": [":root", ".app-shell", ".workbench-topbar"],
+            "planner.css": [".planner-workbench", ".node-shelf", ".canvas-toolbar"],
+            "nodes.css": [".graph-node", ".port", ".display-node-result"],
+            "settings.css": [".providers-shell", ".provider-card", ".persona-card"],
+            "chat.css": [".chat-shell", ".trace-panel", ".composer"],
+            "responsive.css": ["@media (max-width: 980px)", ".planner-workbench", ".chat-shell"],
+        }
+        for filename, selectors in expected_files.items():
+            self.assertIn(f"@import \"./styles/{filename}\";", entry)
+            content = (styles_root / filename).read_text(encoding="utf-8")
+            for selector in selectors:
+                self.assertIn(selector, content)
+
+        self.assertNotIn(".trace-panel", entry)
+        self.assertNotIn(".graph-node", entry)
 
     def test_planner_page_references_assets_and_nodes(self):
         html = (ROOT / "src" / "frontend" / "App.vue").read_text(encoding="utf-8")
@@ -295,7 +322,7 @@ class FrontendStaticTests(unittest.TestCase):
         self.assertIn("node-properties", js)
         self.assertIn("autocomplete=\"off\"", js)
         self.assertIn("event.preventDefault()", js)
-        css = (ROOT / "src" / "frontend" / "styles.css").read_text(encoding="utf-8")
+        css = read_frontend_css()
         self.assertIn(".node-filters", css)
         self.assertIn(".node-preview", css)
         self.assertIn(".personas-shell", css)
@@ -323,7 +350,7 @@ class FrontendStaticTests(unittest.TestCase):
             read_frontend_sources(".vue", ".js")
             + (ROOT / "src" / "frontend" / "api.js").read_text(encoding="utf-8")
         )
-        css = (ROOT / "src" / "frontend" / "styles.css").read_text(encoding="utf-8")
+        css = read_frontend_css()
 
         self.assertIn("FlainBot Chat", html)
         self.assertIn("data-view=\"chat\"", html)

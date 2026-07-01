@@ -1,0 +1,146 @@
+﻿.graph-node {
+  position: absolute;
+  width: 270px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(24, 32, 45, 0.12);
+  user-select: none;
+}
+
+.graph-node.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.16), 0 8px 22px rgba(24, 32, 45, 0.12);
+}
+
+.node-remove-dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 3;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--danger);
+  cursor: pointer;
+  padding: 0;
+}
+
+.node-remove-dot:hover {
+  background: #d92d20;
+}
+
+.node-header {
+  cursor: grab;
+  border-bottom: 1px solid var(--panel-border);
+  border-radius: 8px 8px 0 0;
+  background: var(--node-head);
+  padding: 10px 12px;
+}
+
+.node-header:active {
+  cursor: grabbing;
+}
+
+.node-header h3 {
+  margin: 2px 0 0;
+  font-size: 15px;
+}
+
+.node-body {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.ports {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.port-column {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.port-title {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.port {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.port::before,
+.port::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: 0 0 auto;
+}
+
+.port.output {
+  justify-content: flex-end;
+}
+
+.port.output::before {
+  content: none;
+}
+
+.port.input::after {
+  content: none;
+}
+
+.port.compatible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(23, 105, 170, 0.14);
+}
+
+.port-type {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.port.output .port-type {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.node-properties {
+  display: grid;
+  gap: 8px;
+}
+
+.display-node-result {
+  min-height: 52px;
+  max-height: 160px;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--text);
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

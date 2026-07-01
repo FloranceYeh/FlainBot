@@ -1,0 +1,111 @@
+﻿.field {
+  display: grid;
+  gap: 4px;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 5px 7px;
+}
+
+.field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.providers-shell,
+.personas-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.provider-editor,
+.provider-list-panel,
+.persona-editor,
+.persona-list-panel {
+  min-height: 0;
+  overflow: auto;
+}
+
+.provider-form,
+.provider-list,
+.persona-form,
+.persona-list {
+  display: grid;
+  gap: 10px;
+}
+
+.provider-card,
+.persona-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.provider-card h3,
+.provider-card p,
+.persona-card h3,
+.persona-card p,
+.empty-state {
+  margin: 0;
+}
+
+.provider-card p,
+.persona-card p,
+.empty-state {
+  color: var(--muted);
+}
+
+.persona-card p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.danger {
+  color: var(--danger);
+}
+
+pre {
+  min-height: 220px;
+  margin: 0;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 16px;
+}
+
+code {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+

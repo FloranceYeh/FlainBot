@@ -1,0 +1,21 @@
+﻿@media (max-width: 980px) {
+  .planner-workbench {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-actions {
+    justify-content: flex-start;
+  }
+
+  .canvas-panel {
+    min-height: 0;
+  }
+
+  .chat-shell {
+    width: auto;
+  }
+}
